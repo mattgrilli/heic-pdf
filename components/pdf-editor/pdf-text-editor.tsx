@@ -73,14 +73,11 @@ export function PdfTextEditor({ pdfDoc, currentPage, canvasRef }: PdfTextEditorP
       const url = URL.createObjectURL(blob)
 
       // Update the PDF viewer
-      // Import a specific version of PDF.js from CDN
-      const pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/+esm")
+      const pdfjs = await import("pdfjs-dist")
+      const pdfjsWorker = await import("pdfjs-dist/build/pdf.worker.entry")
+      pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
-      // Set the worker source to the same version
-      const workerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js"
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
-
-      const loadingTask = pdfjsLib.getDocument(url)
+      const loadingTask = pdfjs.getDocument(url)
       const pdf = await loadingTask.promise
       const pdfPage = await pdf.getPage(currentPage)
 

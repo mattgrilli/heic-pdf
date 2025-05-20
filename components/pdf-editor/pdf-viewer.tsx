@@ -23,16 +23,15 @@ export function PdfViewer({ pdfUrl, currentPage, scale, canvasRef }: PdfViewerPr
 
     const loadPdf = async () => {
       try {
-        // Import a specific version of PDF.js from CDN
-        // This ensures we use the same version for both API and worker
-        const pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/+esm")
+        // Dynamically import pdf.js
+        const pdfjs = await import("pdfjs-dist")
 
-        // Set the worker source to the same version
-        const workerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js"
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
+        // Set the worker source
+        const pdfjsWorker = await import("pdfjs-dist/build/pdf.worker.entry")
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
         // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument(pdfUrl)
+        const loadingTask = pdfjs.getDocument(pdfUrl)
         const pdf = await loadingTask.promise
 
         if (!isMounted) return
