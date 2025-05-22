@@ -50,12 +50,12 @@ export function AdPlaceholder() {
   }, [])
 
   return (
-    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+    <div className="border rounded-lg overflow-hidden dark:border-gray-700 relative">
       <div className="bg-gray-100 dark:bg-gray-800 p-2 text-xs text-gray-500 dark:text-gray-400">Advertisement</div>
-      <div ref={adContainerRef} className="h-[250px] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div ref={adContainerRef} className="h-[250px] bg-gray-50 dark:bg-gray-900 relative">
         {/* Google AdSense Ad Unit */}
         <ins
-          className="adsbygoogle"
+          className="adsbygoogle block w-full h-full"
           style={{ display: "block", width: "100%", height: "250px" }}
           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // Replace with your AdSense publisher ID
           data-ad-slot="XXXXXXXXXX" // Replace with your ad slot ID
@@ -63,9 +63,11 @@ export function AdPlaceholder() {
           data-full-width-responsive="true"
         ></ins>
 
-        {/* Fallback content if ads don't load */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="text-gray-400 dark:text-gray-600 text-sm">Ad Space</p>
+        {/* Minimal fallback - only show when ads fail to load */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+          <div className="w-16 h-16 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded flex items-center justify-center">
+            <span className="text-xs text-gray-400 dark:text-gray-600">Ad</span>
+          </div>
         </div>
       </div>
     </div>

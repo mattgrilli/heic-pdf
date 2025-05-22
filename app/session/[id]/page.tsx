@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { FileUploader } from "@/components/file-uploader"
 import { ImagePreview } from "@/components/image-preview"
 import { ConversionOptions } from "@/components/conversion-options"
+import { BatchProgress } from "@/components/batch-progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toaster } from "@/components/ui/toaster"
@@ -19,6 +20,13 @@ import { UsageStats } from "@/components/usage-stats"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { SocialShare } from "@/components/social-share"
 
+interface ConversionProgress {
+  totalFiles: number
+  completedFiles: number
+  currentFile: string
+  errors: string[]
+}
+
 export default function HeicConverter() {
   const params = useParams()
   const router = useRouter()
@@ -28,35 +36,54 @@ export default function HeicConverter() {
   const [files, setFiles] = useState<File[]>([])
   const [convertedImages, setConvertedImages] = useState<{ file: File; url: string }[]>([])
   const [isConverting, setIsConverting] = useState(false)
-  const [format, setFormat] = useState<"jpeg" | "png">("jpeg")
+  const [format, setFormat] = useState<"jpeg" | "png" | "webp">("jpeg")
   const [quality, setQuality] = useState(0.8)
+  const [autoDownload, setAutoDownload] = useState(false)
   const [expirationTime, setExpirationTime] = useState<Date | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [isZipping, setIsZipping] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [conversionProgress, setConversionProgress] = useState<ConversionProgress>({
+    totalFiles: 0,
+    completedFiles: 0,
+    currentFile: "",
+    errors: [],
+  })
   const [usageStats, setUsageStats] = useState({
     totalConversions: 0,
     sessionsStarted: 0,
     lastUsed: "",
   })
 
-  // Load usage stats from localStorage
+  // Load settings from localStorage
   useEffect(() => {
+    const savedSettings = localStorage.getItem("heicConverterSettings")
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings)
+      setFormat(settings.format || "jpeg")
+      setQuality(settings.quality || 0.8)
+      setAutoDownload(settings.autoDownload || false)
+    }
+
     const stats = localStorage.getItem("heicConverterStats")
     if (stats) {
       setUsageStats(JSON.parse(stats))
     }
   }, [])
 
+  // Save settings to localStorage
+  useEffect(() => {
+    const settings = { format, quality, autoDownload }
+    localStorage.setItem("heicConverterSettings", JSON.stringify(settings))
+  }, [format, quality, autoDownload])
+
   // Verify this is the user's session
   useEffect(() => {
     const storedSessionId = localStorage.getItem("heicConverterSessionId")
     if (storedSessionId !== sessionId) {
-      // Redirect to home if session IDs don't match
       router.push("/")
     } else {
-      // Update sessions started count
       const stats = JSON.parse(localStorage.getItem("heicConverterStats") || "{}")
       const updatedStats = {
         ...stats,
@@ -69,7 +96,6 @@ export default function HeicConverter() {
   }, [sessionId, router])
 
   const handleClearAll = useCallback(() => {
-    // Revoke object URLs to prevent memory leaks
     convertedImages.forEach(({ url }) => {
       URL.revokeObjectURL(url)
     })
@@ -78,24 +104,27 @@ export default function HeicConverter() {
     setConvertedImages([])
     setExpirationTime(null)
     setTimeRemaining(0)
+    setConversionProgress({
+      totalFiles: 0,
+      completedFiles: 0,
+      currentFile: "",
+      errors: [],
+    })
   }, [convertedImages])
 
   useEffect(() => {
-    // Set expiration time when files are added (30 minutes from now)
     if (files.length > 0 && !expirationTime) {
       const expiration = new Date()
       expiration.setMinutes(expiration.getMinutes() + 30)
       setExpirationTime(expiration)
     }
 
-    // Clear everything when time expires
     if (expirationTime) {
       const interval = setInterval(() => {
         const now = new Date()
         const diff = expirationTime.getTime() - now.getTime()
 
         if (diff <= 0) {
-          // Time expired, clear everything
           handleClearAll()
           setExpirationTime(null)
           setTimeRemaining(0)
@@ -104,10 +133,9 @@ export default function HeicConverter() {
             description: "Your files have been automatically removed after 30 minutes.",
           })
         } else {
-          // Update time remaining in minutes
           setTimeRemaining(Math.ceil(diff / (1000 * 60)))
         }
-      }, 30000) // Check every 30 seconds
+      }, 30000)
 
       return () => clearInterval(interval)
     }
@@ -115,7 +143,6 @@ export default function HeicConverter() {
 
   const handleFilesAdded = useCallback(
     (newFiles: File[]) => {
-      // Filter out non-HEIC files
       const heicFiles = newFiles.filter(
         (file) => file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic",
       )
@@ -137,7 +164,6 @@ export default function HeicConverter() {
     (indexToRemove: number) => {
       setFiles((prevFiles) => prevFiles.filter((_, index) => index !== indexToRemove))
 
-      // If removing the last file, reset expiration time
       if (files.length === 1) {
         setExpirationTime(null)
         setTimeRemaining(0)
@@ -150,13 +176,8 @@ export default function HeicConverter() {
     setFiles((prevFiles) => {
       const updatedFiles = [...prevFiles]
       const file = updatedFiles[index]
-
-      // Get the file extension
       const extension = file.name.split(".").pop() || "heic"
-
-      // Create a new file with the new name
       const renamedFile = new File([file], `${newName}.${extension}`, { type: file.type })
-
       updatedFiles[index] = renamedFile
       return updatedFiles
     })
@@ -167,24 +188,92 @@ export default function HeicConverter() {
 
     setIsConverting(true)
     const converted: { file: File; url: string }[] = []
+    const errors: string[] = []
+
+    // Initialize progress
+    setConversionProgress({
+      totalFiles: files.length,
+      completedFiles: 0,
+      currentFile: "",
+      errors: [],
+    })
 
     try {
-      // Dynamically import heic2any to avoid SSR issues
       const heic2any = (await import("heic2any")).default
 
-      for (const file of files) {
-        const blob = (await heic2any({
-          blob: file,
-          toType: format,
-          quality,
-        })) as Blob
+      // Process files in batches to prevent memory issues
+      const batchSize = 5
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize)
 
-        const convertedFile = new File([blob], file.name.replace(/\.heic$/i, `.${format}`), {
-          type: format === "jpeg" ? "image/jpeg" : "image/png",
+        // Process batch concurrently
+        const batchPromises = batch.map(async (file, batchIndex) => {
+          const globalIndex = i + batchIndex
+
+          try {
+            // Update current file
+            setConversionProgress((prev) => ({
+              ...prev,
+              currentFile: file.name,
+            }))
+
+            // Add delay for large files to prevent browser freeze
+            if (file.size > 10 * 1024 * 1024) {
+              // 10MB
+              await new Promise((resolve) => setTimeout(resolve, 100))
+            }
+
+            const blob = (await heic2any({
+              blob: file,
+              toType: format === "webp" ? "image/jpeg" : format, // Fallback for WebP
+              quality,
+            })) as Blob
+
+            // Convert to WebP if requested (using canvas)
+            let finalBlob = blob
+            if (format === "webp") {
+              finalBlob = await convertToWebP(blob, quality)
+            }
+
+            const convertedFile = new File([finalBlob], file.name.replace(/\.heic$/i, `.${format}`), {
+              type: format === "webp" ? "image/webp" : format === "jpeg" ? "image/jpeg" : "image/png",
+            })
+
+            const url = URL.createObjectURL(convertedFile)
+
+            // Auto-download if enabled
+            if (autoDownload) {
+              const a = document.createElement("a")
+              a.href = url
+              a.download = convertedFile.name
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+            }
+
+            return { file: convertedFile, url }
+          } catch (error) {
+            const errorMsg = `${file.name}: ${error instanceof Error ? error.message : "Conversion failed"}`
+            errors.push(errorMsg)
+            console.error(`Error converting ${file.name}:`, error)
+            return null
+          } finally {
+            // Update progress
+            setConversionProgress((prev) => ({
+              ...prev,
+              completedFiles: prev.completedFiles + 1,
+              errors: [...prev.errors, ...errors.slice(prev.errors.length)],
+            }))
+          }
         })
 
-        const url = URL.createObjectURL(convertedFile)
-        converted.push({ file: convertedFile, url })
+        const batchResults = await Promise.all(batchPromises)
+        converted.push(...(batchResults.filter((result) => result !== null) as { file: File; url: string }[]))
+
+        // Small delay between batches
+        if (i + batchSize < files.length) {
+          await new Promise((resolve) => setTimeout(resolve, 50))
+        }
       }
 
       setConvertedImages(converted)
@@ -193,27 +282,78 @@ export default function HeicConverter() {
       const stats = JSON.parse(localStorage.getItem("heicConverterStats") || "{}")
       const updatedStats = {
         ...stats,
-        totalConversions: (stats.totalConversions || 0) + files.length,
+        totalConversions: (stats.totalConversions || 0) + converted.length,
         lastUsed: new Date().toISOString(),
       }
       localStorage.setItem("heicConverterStats", JSON.stringify(updatedStats))
       setUsageStats(updatedStats)
 
-      toast({
-        title: "Conversion complete",
-        description: `Successfully converted ${files.length} file${files.length > 1 ? "s" : ""}.`,
-      })
+      // Final progress update
+      setConversionProgress((prev) => ({
+        ...prev,
+        currentFile: "",
+      }))
+
+      const successCount = converted.length
+      const errorCount = errors.length
+
+      if (successCount > 0) {
+        toast({
+          title: "Conversion complete",
+          description: `Successfully converted ${successCount} file${successCount > 1 ? "s" : ""}${errorCount > 0 ? `. ${errorCount} failed.` : "."}`,
+        })
+      } else {
+        toast({
+          title: "Conversion failed",
+          description: "No files were converted successfully.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       console.error("Conversion error:", error)
       toast({
         title: "Conversion failed",
-        description: "There was an error converting your files.",
+        description: "There was an error during conversion.",
         variant: "destructive",
       })
     } finally {
       setIsConverting(false)
     }
-  }, [files, format, quality, toast])
+  }, [files, format, quality, autoDownload, toast])
+
+  // Helper function to convert to WebP using canvas
+  const convertToWebP = async (blob: Blob, quality: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"))
+          return
+        }
+
+        canvas.width = img.width
+        canvas.height = img.height
+        ctx.drawImage(img, 0, 0)
+
+        canvas.toBlob(
+          (webpBlob) => {
+            if (webpBlob) {
+              resolve(webpBlob)
+            } else {
+              reject(new Error("Failed to convert to WebP"))
+            }
+          },
+          "image/webp",
+          quality,
+        )
+      }
+      img.onerror = () => reject(new Error("Failed to load image"))
+      img.src = URL.createObjectURL(blob)
+    })
+  }
 
   const handleDownload = useCallback((url: string, fileName: string) => {
     const a = document.createElement("a")
@@ -237,18 +377,15 @@ export default function HeicConverter() {
     try {
       const zip = new JSZip()
 
-      // Add each file to the zip
       for (const { file, url } of convertedImages) {
         const response = await fetch(url)
         const blob = await response.blob()
         zip.file(file.name, blob)
       }
 
-      // Generate the zip file
       const zipBlob = await zip.generateAsync({ type: "blob" })
       const zipUrl = URL.createObjectURL(zipBlob)
 
-      // Download the zip file
       const a = document.createElement("a")
       a.href = zipUrl
       a.download = `converted_images_${new Date().toISOString().slice(0, 10)}.zip`
@@ -256,7 +393,6 @@ export default function HeicConverter() {
       a.click()
       document.body.removeChild(a)
 
-      // Clean up
       URL.revokeObjectURL(zipUrl)
 
       toast({
@@ -276,11 +412,8 @@ export default function HeicConverter() {
   }, [convertedImages, toast])
 
   const handleNewSession = useCallback(() => {
-    // Generate a new session ID
     const newSessionId = uuidv4()
     localStorage.setItem("heicConverterSessionId", newSessionId)
-
-    // Redirect to the new session
     router.push(`/session/${newSessionId}`)
   }, [router])
 
@@ -295,7 +428,7 @@ export default function HeicConverter() {
             <BarChart className="h-4 w-4 mr-2" />
             Stats
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowFeedback(!showFeedback)}>
+          <Button variant="outline" size="sm" onClick={() => setShowFeedback(true)}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Feedback
           </Button>
@@ -307,8 +440,6 @@ export default function HeicConverter() {
 
       {showStats && <UsageStats stats={usageStats} onClose={() => setShowStats(false)} />}
 
-      {showFeedback && <FeedbackForm onClose={() => setShowFeedback(false)} />}
-
       {timeRemaining > 0 && (
         <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-6 text-center">
           <p className="text-amber-800 dark:text-amber-200">
@@ -318,7 +449,7 @@ export default function HeicConverter() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-6">
           <Tabs defaultValue="heic" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="heic">HEIC Converter</TabsTrigger>
@@ -328,7 +459,21 @@ export default function HeicConverter() {
             </TabsList>
 
             <TabsContent value="heic" className="space-y-6">
-              <FileUploader onFilesAdded={handleFilesAdded} acceptedTypes={{ "image/heic": [".heic"] }} />
+              <FileUploader
+                onFilesAdded={handleFilesAdded}
+                acceptedTypes={{ "image/heic": [".heic"] }}
+                maxSize={25 * 1024 * 1024} // 25MB
+                maxFiles={50}
+              />
+
+              {isConverting && (
+                <BatchProgress
+                  totalFiles={conversionProgress.totalFiles}
+                  completedFiles={conversionProgress.completedFiles}
+                  currentFile={conversionProgress.currentFile}
+                  errors={conversionProgress.errors}
+                />
+              )}
 
               {files.length > 0 && (
                 <>
@@ -352,7 +497,14 @@ export default function HeicConverter() {
                     ))}
                   </div>
 
-                  <ConversionOptions format={format} setFormat={setFormat} quality={quality} setQuality={setQuality} />
+                  <ConversionOptions
+                    format={format}
+                    setFormat={setFormat}
+                    quality={quality}
+                    setQuality={setQuality}
+                    autoDownload={autoDownload}
+                    setAutoDownload={setAutoDownload}
+                  />
 
                   <div className="flex justify-center">
                     <Button
@@ -414,11 +566,16 @@ export default function HeicConverter() {
           </Tabs>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <DonationButton />
-          <AdPlaceholder />
+        {/* Sidebar - ensure it's properly isolated */}
+        <div className="lg:col-span-1">
+          <div className="space-y-6 lg:sticky lg:top-8">
+            <DonationButton />
+            <AdPlaceholder />
+          </div>
         </div>
       </div>
+
+      {showFeedback && <FeedbackForm onClose={() => setShowFeedback(false)} />}
 
       <Toaster />
     </div>

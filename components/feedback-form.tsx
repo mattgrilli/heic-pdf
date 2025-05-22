@@ -7,9 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { X } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface FeedbackFormProps {
   onClose: () => void
@@ -66,15 +72,12 @@ export function FeedbackForm({ onClose }: FeedbackFormProps) {
   }
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="relative">
-        <Button variant="ghost" size="icon" className="absolute right-2 top-2" onClick={onClose} aria-label="Close">
-          <X className="h-4 w-4" />
-        </Button>
-        <CardTitle>Send Feedback</CardTitle>
-        <CardDescription>Help us improve this tool by sharing your thoughts and suggestions.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Send Feedback</DialogTitle>
+          <DialogDescription>Help us improve this tool by sharing your thoughts and suggestions.</DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name (optional)</Label>
@@ -107,11 +110,16 @@ export function FeedbackForm({ onClose }: FeedbackFormProps) {
               className="min-h-[100px]"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting || !feedback.trim()}>
-            {isSubmitting ? "Sending..." : "Send Feedback"}
-          </Button>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !feedback.trim()}>
+              {isSubmitting ? "Sending..." : "Send Feedback"}
+            </Button>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
