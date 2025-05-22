@@ -1,6 +1,7 @@
 import type React from "react"
 import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import Script from "next/script"
 
 export default function RootLayout({
   children,
@@ -12,6 +13,14 @@ export default function RootLayout({
       <head>
         <title>HEIC Converter</title>
         <meta name="description" content="Convert HEIC images to JPEG or PNG format" />
+        {/* Google AdSense verification code */}
+        <Script
+          id="adsense-init"
+          strategy="afterInteractive"
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX`}
+          crossOrigin="anonymous"
+        />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

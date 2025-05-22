@@ -46,7 +46,7 @@ export function FileUploader({
       className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
         isDragging || isDragActive
           ? "border-primary bg-primary/5"
-          : "border-gray-300 hover:border-primary/50 hover:bg-gray-50"
+          : "border-gray-300 dark:border-gray-700 hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-900"
       }`}
     >
       <input {...getInputProps()} />
@@ -55,7 +55,7 @@ export function FileUploader({
           <Upload className="h-6 w-6 text-primary" />
         </div>
         <h3 className="text-lg font-medium">Drag & drop files here</h3>
-        <p className="text-sm text-gray-500 max-w-md mx-auto">
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
           Or click to browse your files. Accepted formats: {fileTypeDescriptions}
         </p>
         {fileRejections.length > 0 && (

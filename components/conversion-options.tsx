@@ -14,7 +14,7 @@ interface ConversionOptionsProps {
 
 export function ConversionOptions({ format, setFormat, quality, setQuality }: ConversionOptionsProps) {
   return (
-    <Card>
+    <Card className="dark:border-gray-700">
       <CardHeader>
         <CardTitle>Conversion Options</CardTitle>
       </CardHeader>
@@ -41,7 +41,7 @@ export function ConversionOptions({ format, setFormat, quality, setQuality }: Co
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label>Quality</Label>
-              <span className="text-sm text-gray-500">{Math.round(quality * 100)}%</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{Math.round(quality * 100)}%</span>
             </div>
             <Slider
               value={[quality * 100]}
@@ -51,7 +51,7 @@ export function ConversionOptions({ format, setFormat, quality, setQuality }: Co
               onValueChange={(value) => setQuality(value[0] / 100)}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-gray-500">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>Lower quality, smaller file</span>
               <span>Higher quality, larger file</span>
             </div>
