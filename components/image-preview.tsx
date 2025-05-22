@@ -24,18 +24,25 @@ export function ImagePreview({ file, onRemove, onRename }: ImagePreviewProps) {
         setLoading(true)
         setError(false)
 
-        // Dynamically import heic2any
-        const heic2any = (await import("heic2any")).default
+        // For HEIC files, we need to convert first
+        if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
+          // Dynamically import heic2any
+          const heic2any = (await import("heic2any")).default
 
-        // Convert HEIC to JPEG for preview
-        const blob = (await heic2any({
-          blob: file,
-          toType: "image/jpeg",
-          quality: 0.3, // Lower quality for preview
-        })) as Blob
+          // Convert HEIC to JPEG for preview
+          const blob = (await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.3, // Lower quality for preview
+          })) as Blob
 
-        const url = URL.createObjectURL(blob)
-        setPreview(url)
+          const url = URL.createObjectURL(blob)
+          setPreview(url)
+        } else {
+          // For other image types, we can use directly
+          const url = URL.createObjectURL(file)
+          setPreview(url)
+        }
       } catch (err) {
         console.error("Error creating preview:", err)
         setError(true)

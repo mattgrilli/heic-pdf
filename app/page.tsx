@@ -9,10 +9,10 @@ export default function HomePage() {
 
   useEffect(() => {
     // Generate a unique session ID if one doesn't exist
-    let sessionId = localStorage.getItem("heicConverterSessionId")
+    let sessionId = localStorage.getItem("imageConverterSessionId")
     if (!sessionId) {
       sessionId = uuidv4()
-      localStorage.setItem("heicConverterSessionId", sessionId)
+      localStorage.setItem("imageConverterSessionId", sessionId)
     }
 
     // Redirect to the unique session page

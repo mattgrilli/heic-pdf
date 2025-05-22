@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { FileUploader } from "@/components/file-uploader"
 import { ImagePreview } from "@/components/image-preview"
@@ -32,13 +32,12 @@ interface ConversionProgress {
   errors: string[]
 }
 
-export default function HeicConverter() {
+export default function ImageConverter() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const sessionId = params.id as string
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const workerRef = useRef<Worker | null>(null)
 
   const [files, setFiles] = useState<File[]>([])
   const [convertedImages, setConvertedImages] = useState<{ file: File; url: string; format: string }[]>([])
@@ -55,7 +54,7 @@ export default function HeicConverter() {
   const [showBatchRename, setShowBatchRename] = useState(false)
   const [showCameraCapture, setShowCameraCapture] = useState(false)
   const [editingFile, setEditingFile] = useState<{ file: File; previewUrl: string } | null>(null)
-  const [fileEdits, setFileEdits] = useState<Record<string, ImageEditSettings>>({})
+  const [fileEdits, setFileEdits] = useState<Record<string, { blob: Blob; settings: ImageEditSettings }>>({})
   const [conversionProgress, setConversionProgress] = useState<ConversionProgress>({
     totalFiles: 0,
     completedFiles: 0,
@@ -67,173 +66,10 @@ export default function HeicConverter() {
     sessionsStarted: 0,
     lastUsed: "",
   })
-  const [pendingConversions, setPendingConversions] = useState<string[]>([])
-
-  // Initialize web worker - using a different approach
-  useEffect(() => {
-    if (typeof Worker !== "undefined" && !workerRef.current) {
-      try {
-        // Create a worker using a blob URL
-        const workerCode = `
-          self.addEventListener("message", function(event) {
-            const { id, file, fileName, format, quality } = event.data;
-            
-            // Just send back a message that we need to do the conversion on the main thread
-            self.postMessage({
-              id,
-              needsMainThreadConversion: true,
-              fileName,
-              format,
-              quality
-            });
-          });
-        `
-
-        const blob = new Blob([workerCode], { type: "application/javascript" })
-        const workerUrl = URL.createObjectURL(blob)
-
-        workerRef.current = new Worker(workerUrl)
-
-        // Set up message handler
-        workerRef.current.onmessage = (event) => {
-          const { id, needsMainThreadConversion, fileName, format, quality, success, data, error } = event.data
-
-          if (needsMainThreadConversion) {
-            // We need to do the conversion on the main thread
-            handleMainThreadConversion(id, fileName, format, quality)
-          } else if (success && data) {
-            // Process successful conversion result
-            processConversionResult(id, fileName, format, data)
-          } else if (error) {
-            // Handle error
-            handleConversionError(id, fileName, error)
-          }
-        }
-      } catch (error) {
-        console.error("Error creating web worker:", error)
-      }
-    }
-
-    return () => {
-      // Clean up worker
-      if (workerRef.current) {
-        workerRef.current.terminate()
-        workerRef.current = null
-      }
-    }
-  }, [])
-
-  // Function to handle conversion on the main thread
-  const handleMainThreadConversion = async (id: string, fileName: string, format: string, quality: number) => {
-    try {
-      // Find the file
-      const file = files.find((f) => f.name === fileName)
-      if (!file) {
-        throw new Error("File not found")
-      }
-
-      // Convert the file
-      const heic2any = (await import("heic2any")).default
-      const blob = (await heic2any({
-        blob: file,
-        toType: format === "webp" ? "image/jpeg" : format,
-        quality,
-      })) as Blob
-
-      // Convert to WebP if needed
-      let finalBlob = blob
-      if (format === "webp") {
-        finalBlob = await convertToWebP(blob, quality)
-      }
-
-      // Create file and URL
-      const convertedFile = new File([finalBlob], fileName.replace(/\.heic$/i, `.${format}`), {
-        type: format === "webp" ? "image/webp" : format === "jpeg" ? "image/jpeg" : "image/png",
-      })
-      const url = URL.createObjectURL(convertedFile)
-
-      // Add to converted images
-      setConvertedImages((prev) => [...prev, { file: convertedFile, url, format }])
-
-      // Auto-download if enabled
-      if (autoDownload) {
-        const a = document.createElement("a")
-        a.href = url
-        a.download = convertedFile.name
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-      }
-
-      // Update progress
-      setConversionProgress((prev) => ({
-        ...prev,
-        completedFiles: prev.completedFiles + 1,
-        currentFile: "",
-      }))
-
-      // Remove from pending conversions
-      setPendingConversions((prev) => prev.filter((pendingId) => pendingId !== id))
-    } catch (error) {
-      // Handle error
-      const errorMsg = `${fileName}: ${error instanceof Error ? error.message : "Conversion failed"}`
-      setConversionProgress((prev) => ({
-        ...prev,
-        errors: [...prev.errors, errorMsg],
-        completedFiles: prev.completedFiles + 1,
-      }))
-      setPendingConversions((prev) => prev.filter((pendingId) => pendingId !== id))
-    }
-  }
-
-  // Function to process conversion result
-  const processConversionResult = (id: string, fileName: string, format: string, data: ArrayBuffer) => {
-    // Create blob from array buffer
-    const blob = new Blob([data], {
-      type: format === "webp" ? "image/webp" : format === "jpeg" ? "image/jpeg" : "image/png",
-    })
-
-    // Create file and URL
-    const file = new File([blob], fileName, { type: blob.type })
-    const url = URL.createObjectURL(blob)
-
-    // Add to converted images
-    setConvertedImages((prev) => [...prev, { file, url, format }])
-
-    // Auto-download if enabled
-    if (autoDownload) {
-      const a = document.createElement("a")
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    }
-
-    // Update progress
-    setConversionProgress((prev) => ({
-      ...prev,
-      completedFiles: prev.completedFiles + 1,
-      currentFile: "",
-    }))
-
-    // Remove from pending conversions
-    setPendingConversions((prev) => prev.filter((pendingId) => pendingId !== id))
-  }
-
-  // Function to handle conversion error
-  const handleConversionError = (id: string, fileName: string, error: string) => {
-    setConversionProgress((prev) => ({
-      ...prev,
-      errors: [...prev.errors, `${fileName}: ${error}`],
-      completedFiles: prev.completedFiles + 1,
-    }))
-    setPendingConversions((prev) => prev.filter((pendingId) => pendingId !== id))
-  }
 
   // Load settings from localStorage
   useEffect(() => {
-    const savedSettings = localStorage.getItem("heicConverterSettings")
+    const savedSettings = localStorage.getItem("imageConverterSettings")
     if (savedSettings) {
       const settings = JSON.parse(savedSettings)
       setFormats(settings.formats || ["jpeg"])
@@ -242,7 +78,7 @@ export default function HeicConverter() {
       setPreserveExif(settings.preserveExif !== undefined ? settings.preserveExif : true)
     }
 
-    const stats = localStorage.getItem("heicConverterStats")
+    const stats = localStorage.getItem("imageConverterStats")
     if (stats) {
       setUsageStats(JSON.parse(stats))
     }
@@ -251,22 +87,22 @@ export default function HeicConverter() {
   // Save settings to localStorage
   useEffect(() => {
     const settings = { formats, quality, autoDownload, preserveExif }
-    localStorage.setItem("heicConverterSettings", JSON.stringify(settings))
+    localStorage.setItem("imageConverterSettings", JSON.stringify(settings))
   }, [formats, quality, autoDownload, preserveExif])
 
   // Verify this is the user's session
   useEffect(() => {
-    const storedSessionId = localStorage.getItem("heicConverterSessionId")
+    const storedSessionId = localStorage.getItem("imageConverterSessionId")
     if (storedSessionId !== sessionId) {
       router.push("/")
     } else {
-      const stats = JSON.parse(localStorage.getItem("heicConverterStats") || "{}")
+      const stats = JSON.parse(localStorage.getItem("imageConverterStats") || "{}")
       const updatedStats = {
         ...stats,
         sessionsStarted: (stats.sessionsStarted || 0) + 1,
         lastUsed: new Date().toISOString(),
       }
-      localStorage.setItem("heicConverterStats", JSON.stringify(updatedStats))
+      localStorage.setItem("imageConverterStats", JSON.stringify(updatedStats))
       setUsageStats(updatedStats)
     }
   }, [sessionId, router])
@@ -274,6 +110,11 @@ export default function HeicConverter() {
   const handleClearAll = useCallback(() => {
     convertedImages.forEach(({ url }) => {
       URL.revokeObjectURL(url)
+    })
+
+    // Also revoke any edited image blobs
+    Object.values(fileEdits).forEach(({ blob }) => {
+      URL.revokeObjectURL(URL.createObjectURL(blob))
     })
 
     setFiles([])
@@ -287,7 +128,7 @@ export default function HeicConverter() {
       errors: [],
     })
     setFileEdits({})
-  }, [convertedImages])
+  }, [convertedImages, fileEdits])
 
   useEffect(() => {
     if (files.length > 0 && !expirationTime) {
@@ -318,75 +159,135 @@ export default function HeicConverter() {
     }
   }, [files.length, expirationTime, handleClearAll, toast])
 
-  const handleFilesAdded = useCallback(
-    (newFiles: File[]) => {
-      const heicFiles = newFiles.filter(
-        (file) => file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic",
-      )
-
-      if (heicFiles.length < newFiles.length) {
-        toast({
-          title: "Some files were skipped",
-          description: "Only HEIC files are supported.",
-          variant: "destructive",
-        })
-      }
-
-      setFiles((prev) => [...prev, ...heicFiles])
-    },
-    [toast],
-  )
+  const handleFilesAdded = useCallback((newFiles: File[]) => {
+    // Accept all image files
+    setFiles((prev) => [...prev, ...newFiles])
+  }, [])
 
   const handleRemoveFile = useCallback(
     (indexToRemove: number) => {
-      setFiles((prevFiles) => prevFiles.filter((_, index) => index !== indexToRemove))
+      setFiles((prevFiles) => {
+        const fileToRemove = prevFiles[indexToRemove]
+
+        // Remove any edits for this file
+        if (fileToRemove && fileEdits[fileToRemove.name]) {
+          setFileEdits((prev) => {
+            const newEdits = { ...prev }
+            delete newEdits[fileToRemove.name]
+            return newEdits
+          })
+        }
+
+        return prevFiles.filter((_, index) => index !== indexToRemove)
+      })
 
       if (files.length === 1) {
         setExpirationTime(null)
         setTimeRemaining(0)
       }
     },
-    [files.length],
+    [files.length, fileEdits],
   )
 
-  const handleRenameFile = useCallback((index: number, newName: string) => {
-    setFiles((prevFiles) => {
-      const updatedFiles = [...prevFiles]
-      const file = updatedFiles[index]
-      const extension = file.name.split(".").pop() || "heic"
-      const renamedFile = new File([file], `${newName}.${extension}`, { type: file.type })
-      updatedFiles[index] = renamedFile
-      return updatedFiles
-    })
-  }, [])
+  const handleRenameFile = useCallback(
+    (index: number, newName: string) => {
+      setFiles((prevFiles) => {
+        const updatedFiles = [...prevFiles]
+        const file = updatedFiles[index]
+        const extension = file.name.split(".").pop() || ""
 
-  const handleBatchRename = useCallback((renamedFiles: { originalFile: File; newName: string }[]) => {
-    setFiles((prevFiles) => {
-      return prevFiles.map((file) => {
-        const renamed = renamedFiles.find((rf) => rf.originalFile === file)
-        if (renamed) {
-          const extension = file.name.split(".").pop() || "heic"
-          return new File([file], `${renamed.newName}.${extension}`, { type: file.type })
+        // Check if this file has edits
+        const hasEdits = fileEdits[file.name]
+
+        // Create renamed file
+        const renamedFile = new File([file], `${newName}.${extension}`, { type: file.type })
+        updatedFiles[index] = renamedFile
+
+        // Update edits if needed
+        if (hasEdits) {
+          setFileEdits((prev) => {
+            const newEdits = { ...prev }
+            newEdits[renamedFile.name] = newEdits[file.name]
+            delete newEdits[file.name]
+            return newEdits
+          })
         }
-        return file
+
+        return updatedFiles
       })
-    })
-  }, [])
+    },
+    [fileEdits],
+  )
+
+  const handleBatchRename = useCallback(
+    (renamedFiles: { originalFile: File; newName: string }[]) => {
+      setFiles((prevFiles) => {
+        // Create a map of old file names to new file names
+        const renameMap: Record<string, string> = {}
+
+        const updatedFiles = prevFiles.map((file) => {
+          const renamed = renamedFiles.find((rf) => rf.originalFile === file)
+          if (renamed) {
+            const extension = file.name.split(".").pop() || ""
+            const newFileName = `${renamed.newName}.${extension}`
+            renameMap[file.name] = newFileName
+            return new File([file], newFileName, { type: file.type })
+          }
+          return file
+        })
+
+        // Update edits if needed
+        if (Object.keys(fileEdits).length > 0) {
+          setFileEdits((prev) => {
+            const newEdits: Record<string, { blob: Blob; settings: ImageEditSettings }> = {}
+
+            Object.entries(prev).forEach(([oldFileName, editData]) => {
+              const newFileName = renameMap[oldFileName]
+              if (newFileName) {
+                newEdits[newFileName] = editData
+              } else {
+                newEdits[oldFileName] = editData
+              }
+            })
+
+            return newEdits
+          })
+        }
+
+        return updatedFiles
+      })
+    },
+    [fileEdits],
+  )
 
   const handleEditImage = useCallback(
     (file: File) => {
       // Create preview URL for the editor
       const createPreview = async () => {
         try {
-          const heic2any = (await import("heic2any")).default
-          const blob = (await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8,
-          })) as Blob
+          // Check if we already have an edited version
+          if (fileEdits[file.name]?.blob) {
+            const url = URL.createObjectURL(fileEdits[file.name].blob)
+            setEditingFile({ file, previewUrl: url })
+            return
+          }
 
-          const url = URL.createObjectURL(blob)
-          setEditingFile({ file, previewUrl: url })
+          // For HEIC files, we need to convert first
+          if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
+            const heic2any = (await import("heic2any")).default
+            const blob = (await heic2any({
+              blob: file,
+              toType: "image/jpeg",
+              quality: 0.8,
+            })) as Blob
+
+            const url = URL.createObjectURL(blob)
+            setEditingFile({ file, previewUrl: url })
+          } else {
+            // For other image types, we can use directly
+            const url = URL.createObjectURL(file)
+            setEditingFile({ file, previewUrl: url })
+          }
         } catch (error) {
           console.error("Error creating preview for editor:", error)
           toast({
@@ -399,23 +300,29 @@ export default function HeicConverter() {
 
       createPreview()
     },
-    [toast],
+    [toast, fileEdits],
   )
 
   const handleSaveEdit = useCallback(
     (editedBlob: Blob, settings: ImageEditSettings) => {
       if (!editingFile) return
 
-      // Store edit settings for use during conversion
+      // Store edited blob and settings
       setFileEdits((prev) => ({
         ...prev,
-        [editingFile.file.name]: settings,
+        [editingFile.file.name]: { blob: editedBlob, settings },
       }))
+
+      // Show success message
+      toast({
+        title: "Changes saved",
+        description: "Your edits have been saved and will be applied during conversion.",
+      })
 
       // Close editor
       setEditingFile(null)
     },
-    [editingFile],
+    [editingFile, toast],
   )
 
   const handleCameraCapture = useCallback(
@@ -437,6 +344,7 @@ export default function HeicConverter() {
     setIsConverting(true)
     setConvertedImages([])
     const errors: string[] = []
+    const converted: { file: File; url: string; format: string }[] = []
 
     // Initialize progress
     setConversionProgress({
@@ -447,160 +355,100 @@ export default function HeicConverter() {
     })
 
     try {
-      // If web workers are supported and initialized, use them
-      if (typeof Worker !== "undefined" && workerRef.current) {
-        const pendingIds: string[] = []
+      // Process files in batches to prevent memory issues
+      const batchSize = 3
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize)
 
-        // Process each file for each format
-        for (const file of files) {
+        for (const file of batch) {
           for (const format of formats) {
-            const conversionId = uuidv4()
-            pendingIds.push(conversionId)
+            try {
+              // Update current file
+              setConversionProgress((prev) => ({
+                ...prev,
+                currentFile: `${file.name} to ${format.toUpperCase()}`,
+              }))
 
-            // Update current file
-            setConversionProgress((prev) => ({
-              ...prev,
-              currentFile: `${file.name} to ${format.toUpperCase()}`,
-            }))
+              // Check if we have an edited version of this file
+              let sourceBlob: Blob
+              if (fileEdits[file.name]?.blob) {
+                // Use the edited version
+                sourceBlob = fileEdits[file.name].blob
+              } else {
+                // For HEIC files, we need to convert first
+                if (file.name.toLowerCase().endsWith(".heic") || file.type === "image/heic") {
+                  const heic2any = (await import("heic2any")).default
+                  sourceBlob = (await heic2any({
+                    blob: file,
+                    toType: format === "webp" ? "image/jpeg" : format,
+                    quality,
+                  })) as Blob
+                } else {
+                  // For other image types, we can use directly
+                  sourceBlob = file
+                }
+              }
 
-            // Send to worker - but we'll actually do the conversion on the main thread
-            workerRef.current.postMessage({
-              id: conversionId,
-              file: null, // Don't send the file to avoid cloning issues
-              fileName: file.name,
-              format,
-              quality,
-            })
+              // Convert to the target format using canvas
+              let finalBlob: Blob
+              if (format === "webp" || (file.type !== `image/${format}` && !fileEdits[file.name]?.blob)) {
+                finalBlob = await convertImageFormat(sourceBlob, format, quality)
+              } else {
+                finalBlob = sourceBlob
+              }
+
+              // Get file extension
+              const originalExt = file.name.split(".").pop() || ""
+              const baseName = file.name.substring(0, file.name.length - originalExt.length - 1)
+              const newFileName = `${baseName}.${format}`
+
+              const convertedFile = new File([finalBlob], newFileName, {
+                type: format === "webp" ? "image/webp" : format === "jpeg" ? "image/jpeg" : `image/${format}`,
+              })
+
+              const url = URL.createObjectURL(convertedFile)
+
+              // Auto-download if enabled
+              if (autoDownload) {
+                const a = document.createElement("a")
+                a.href = url
+                a.download = convertedFile.name
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+              }
+
+              converted.push({ file: convertedFile, url, format })
+            } catch (error) {
+              const errorMsg = `${file.name} to ${format}: ${error instanceof Error ? error.message : "Conversion failed"}`
+              errors.push(errorMsg)
+              console.error(`Error converting ${file.name}:`, error)
+            } finally {
+              // Update progress
+              setConversionProgress((prev) => ({
+                ...prev,
+                completedFiles: prev.completedFiles + 1,
+                errors: [...prev.errors, ...errors.slice(prev.errors.length)],
+              }))
+            }
           }
         }
-
-        // Store pending conversions
-        setPendingConversions(pendingIds)
-      } else {
-        // Fallback to main thread conversion
-        await convertOnMainThread()
       }
+
+      setConvertedImages(converted)
 
       // Update conversion stats
-      const stats = JSON.parse(localStorage.getItem("heicConverterStats") || "{}")
+      const stats = JSON.parse(localStorage.getItem("imageConverterStats") || "{}")
       const updatedStats = {
         ...stats,
-        totalConversions: (stats.totalConversions || 0) + files.length * formats.length,
+        totalConversions: (stats.totalConversions || 0) + converted.length,
         lastUsed: new Date().toISOString(),
       }
-      localStorage.setItem("heicConverterStats", JSON.stringify(updatedStats))
+      localStorage.setItem("imageConverterStats", JSON.stringify(updatedStats))
       setUsageStats(updatedStats)
-    } catch (error) {
-      console.error("Conversion error:", error)
-      toast({
-        title: "Conversion failed",
-        description: "There was an error during conversion.",
-        variant: "destructive",
-      })
-      setIsConverting(false)
-    }
-  }, [files, formats, quality, autoDownload, toast, fileEdits])
 
-  // Main thread conversion function
-  const convertOnMainThread = async () => {
-    const heic2any = (await import("heic2any")).default
-    const converted: { file: File; url: string; format: string }[] = []
-    const errors: string[] = []
-
-    // Process files in batches to prevent memory issues
-    const batchSize = 3
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize)
-
-      for (const file of batch) {
-        for (const format of formats) {
-          try {
-            // Update current file
-            setConversionProgress((prev) => ({
-              ...prev,
-              currentFile: `${file.name} to ${format.toUpperCase()}`,
-            }))
-
-            // Convert HEIC to requested format
-            const blob = (await heic2any({
-              blob: file,
-              toType: format === "webp" ? "image/jpeg" : format,
-              quality,
-            })) as Blob
-
-            // Convert to WebP if requested
-            let finalBlob = blob
-            if (format === "webp") {
-              finalBlob = await convertToWebP(blob, quality)
-            }
-
-            // Apply edits if any
-            const editSettings = fileEdits[file.name]
-            if (editSettings) {
-              // Apply edits (simplified version)
-              // In a real implementation, this would apply the edits
-            }
-
-            const convertedFile = new File([finalBlob], file.name.replace(/\.heic$/i, `.${format}`), {
-              type: format === "webp" ? "image/webp" : format === "jpeg" ? "image/jpeg" : "image/png",
-            })
-
-            const url = URL.createObjectURL(convertedFile)
-
-            // Auto-download if enabled
-            if (autoDownload) {
-              const a = document.createElement("a")
-              a.href = url
-              a.download = convertedFile.name
-              document.body.appendChild(a)
-              a.click()
-              document.body.removeChild(a)
-            }
-
-            converted.push({ file: convertedFile, url, format })
-          } catch (error) {
-            const errorMsg = `${file.name} to ${format}: ${error instanceof Error ? error.message : "Conversion failed"}`
-            errors.push(errorMsg)
-            console.error(`Error converting ${file.name}:`, error)
-          } finally {
-            // Update progress
-            setConversionProgress((prev) => ({
-              ...prev,
-              completedFiles: prev.completedFiles + 1,
-              errors: [...prev.errors, ...errors.slice(prev.errors.length)],
-            }))
-          }
-        }
-      }
-    }
-
-    setConvertedImages(converted)
-    setIsConverting(false)
-
-    const successCount = converted.length
-    const errorCount = errors.length
-
-    if (successCount > 0) {
-      toast({
-        title: "Conversion complete",
-        description: `Successfully converted ${successCount} file${successCount > 1 ? "s" : ""}${errorCount > 0 ? `. ${errorCount} failed.` : "."}`,
-      })
-    } else {
-      toast({
-        title: "Conversion failed",
-        description: "No files were converted successfully.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Effect to check if all conversions are complete
-  useEffect(() => {
-    if (isConverting && pendingConversions.length === 0 && conversionProgress.completedFiles > 0) {
-      setIsConverting(false)
-
-      const successCount = convertedImages.length
-      const errorCount = conversionProgress.errors.length
+      const successCount = converted.length
+      const errorCount = errors.length
 
       if (successCount > 0) {
         toast({
@@ -614,24 +462,24 @@ export default function HeicConverter() {
           variant: "destructive",
         })
       }
-
-      // Reset current file
+    } catch (error) {
+      console.error("Conversion error:", error)
+      toast({
+        title: "Conversion failed",
+        description: "There was an error during conversion.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsConverting(false)
       setConversionProgress((prev) => ({
         ...prev,
         currentFile: "",
       }))
     }
-  }, [
-    isConverting,
-    pendingConversions.length,
-    conversionProgress.completedFiles,
-    conversionProgress.errors.length,
-    convertedImages.length,
-    toast,
-  ])
+  }, [files, formats, quality, autoDownload, toast, fileEdits])
 
-  // Helper function to convert to WebP using canvas
-  const convertToWebP = async (blob: Blob, quality: number): Promise<Blob> => {
+  // Helper function to convert image format using canvas
+  const convertImageFormat = async (blob: Blob, format: string, quality: number): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
@@ -647,16 +495,18 @@ export default function HeicConverter() {
         canvas.height = img.height
         ctx.drawImage(img, 0, 0)
 
+        const mimeType = format === "jpg" || format === "jpeg" ? "image/jpeg" : `image/${format}`
+
         canvas.toBlob(
-          (webpBlob) => {
-            if (webpBlob) {
-              resolve(webpBlob)
+          (convertedBlob) => {
+            if (convertedBlob) {
+              resolve(convertedBlob)
             } else {
-              reject(new Error("Failed to convert to WebP"))
+              reject(new Error(`Failed to convert to ${format.toUpperCase()}`))
             }
           },
-          "image/webp",
-          quality,
+          mimeType,
+          format === "png" || format === "gif" ? undefined : quality,
         )
       }
       img.onerror = () => reject(new Error("Failed to load image"))
@@ -741,7 +591,7 @@ export default function HeicConverter() {
 
   const handleNewSession = useCallback(() => {
     const newSessionId = uuidv4()
-    localStorage.setItem("heicConverterSessionId", newSessionId)
+    localStorage.setItem("imageConverterSessionId", newSessionId)
     router.push(`/session/${newSessionId}`)
   }, [router])
 
@@ -768,7 +618,7 @@ export default function HeicConverter() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-center">HEIC Converter</h1>
+        <h1 className="text-3xl font-bold text-center">Image Converter</h1>
         <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
           <PrivacyInfo />
           <ThemeToggle />
@@ -799,15 +649,15 @@ export default function HeicConverter() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3 space-y-6">
-          <Tabs defaultValue="heic" className="w-full">
+          <Tabs defaultValue="upload" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="heic">HEIC Converter</TabsTrigger>
+              <TabsTrigger value="upload">Upload Images</TabsTrigger>
               <TabsTrigger value="converted" disabled={convertedImages.length === 0}>
                 Converted ({convertedImages.length})
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="heic" className="space-y-6">
+            <TabsContent value="upload" className="space-y-6">
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900 rounded-md p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
@@ -824,7 +674,6 @@ export default function HeicConverter() {
               <div className="flex flex-wrap gap-4 mb-4">
                 <FileUploader
                   onFilesAdded={handleFilesAdded}
-                  acceptedTypes={{ "image/heic": [".heic"] }}
                   maxSize={25 * 1024 * 1024} // 25MB
                   maxFiles={50}
                 />
@@ -886,6 +735,11 @@ export default function HeicConverter() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </Button>
+                        {fileEdits[file.name] && (
+                          <div className="absolute top-2 right-12 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            Edited
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

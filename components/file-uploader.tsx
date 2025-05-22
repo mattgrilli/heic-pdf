@@ -14,8 +14,16 @@ interface FileUploaderProps {
 
 export function FileUploader({
   onFilesAdded,
-  acceptedTypes = { "image/heic": [".heic"] },
-  maxSize = 25 * 1024 * 1024, // 25MB default (reduced from 50MB)
+  acceptedTypes = {
+    "image/heic": [".heic", ".HEIC"],
+    "image/jpeg": [".jpg", ".jpeg", ".JPG", ".JPEG"],
+    "image/png": [".png", ".PNG"],
+    "image/gif": [".gif", ".GIF"],
+    "image/webp": [".webp", ".WEBP"],
+    "image/bmp": [".bmp", ".BMP"],
+    "image/tiff": [".tiff", ".tif", ".TIFF", ".TIF"],
+  },
+  maxSize = 25 * 1024 * 1024, // 25MB default
   maxFiles = 50, // Maximum 50 files at once
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
@@ -98,7 +106,7 @@ export function FileUploader({
           </div>
           <h3 className="text-lg font-medium">Drag & drop files here</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-            Or click to browse your files. Accepted formats: {fileTypeDescriptions}
+            Or click to browse your files. Supported formats: HEIC, JPG, PNG, GIF, WebP, BMP, TIFF
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             Max {Math.round(maxSize / 1024 / 1024)}MB per file • Max {maxFiles} files at once
