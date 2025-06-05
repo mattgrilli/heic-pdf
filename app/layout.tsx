@@ -13,16 +13,17 @@ export default function RootLayout({
       <head>
         <title>HEIC Converter</title>
         <meta name="description" content="Convert HEIC images to JPEG or PNG format" />
-        {/* Google AdSense verification code */}
+      </head>
+      <body>
+        {/* Google AdSense script */}
         <Script
           id="adsense-init"
           strategy="afterInteractive"
           async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX`}
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2890525515305277"
           crossOrigin="anonymous"
         />
-      </head>
-      <body>
+        
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <main>{children}</main>
         </ThemeProvider>
@@ -32,5 +33,5 @@ export default function RootLayout({
 }
 
 export const metadata = {
-      generator: 'v0.dev'
-    };
+  generator: 'v0.dev'
+}
