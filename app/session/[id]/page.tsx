@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from "uuid"
 import { AdPlaceholder } from "@/components/ad-placeholder"
 import { DonationButton } from "@/components/donation-button"
 import { FeedbackForm } from "@/components/feedback-form"
-import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil } from "lucide-react"
+import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, CheckCircle, ArrowRight } from "lucide-react"
 import JSZip from "jszip"
 import { UsageStats } from "@/components/usage-stats"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -67,6 +67,9 @@ export default function ImageConverter() {
     sessionsStarted: 0,
     lastUsed: "",
   })
+  const [activeTab, setActiveTab] = useState("upload")
+  const [conversionComplete, setConversionComplete] = useState(false)
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
 
   // Load settings from localStorage
   useEffect(() => {
@@ -129,6 +132,8 @@ export default function ImageConverter() {
       errors: [],
     })
     setFileEdits({})
+    setConversionComplete(false)
+    setActiveTab("upload")
   }, [convertedImages, fileEdits])
 
   useEffect(() => {
@@ -163,6 +168,7 @@ export default function ImageConverter() {
   const handleFilesAdded = useCallback((newFiles: File[]) => {
     // Accept all image files
     setFiles((prev) => [...prev, ...newFiles])
+    setConversionComplete(false)
   }, [])
 
   const handleRemoveFile = useCallback(
@@ -344,6 +350,7 @@ export default function ImageConverter() {
 
     setIsConverting(true)
     setConvertedImages([])
+    setConversionComplete(false)
     const errors: string[] = []
     const converted: { file: File; url: string; format: string }[] = []
 
@@ -437,6 +444,7 @@ export default function ImageConverter() {
       }
 
       setConvertedImages(converted)
+      setConversionComplete(true)
 
       // Update conversion stats
       const stats = JSON.parse(localStorage.getItem("imageConverterStats") || "{}")
@@ -452,8 +460,17 @@ export default function ImageConverter() {
       const errorCount = errors.length
 
       if (successCount > 0) {
+        // Show success animation
+        setShowSuccessAnimation(true)
+        setTimeout(() => setShowSuccessAnimation(false), 3000)
+
+        // Auto-switch to converted tab after a brief delay
+        setTimeout(() => {
+          setActiveTab("converted")
+        }, 1500)
+
         toast({
-          title: "Conversion complete",
+          title: "Conversion complete!",
           description: `Successfully converted ${successCount} file${successCount > 1 ? "s" : ""}${errorCount > 0 ? `. ${errorCount} failed.` : "."}`,
         })
       } else {
@@ -626,325 +643,503 @@ export default function ImageConverter() {
         strategy="afterInteractive"
       />
 
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-center">Image Converter</h1>
-          <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-            <PrivacyInfo />
-            <ThemeToggle />
-            <SocialShare />
-            <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)}>
-              <BarChart className="h-4 w-4 mr-2" />
-              Stats
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowFeedback(true)}>
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Feedback
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleNewSession}>
-              Start New Session
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="container mx-auto py-8 px-4">
+          {/* Enhanced Header */}
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div className="text-center md:text-left">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
+                Image Converter
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
+                Convert your images to any format with ease
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
+              <PrivacyInfo />
+              <ThemeToggle />
+              <SocialShare />
+              <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)}>
+                <BarChart className="h-4 w-4 mr-2" />
+                Stats
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowFeedback(true)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Feedback
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleNewSession}>
+                Start New Session
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {showStats && <UsageStats stats={usageStats} onClose={() => setShowStats(false)} />}
+          {/* Success Animation Overlay */}
+          {showSuccessAnimation && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-in fade-in duration-300">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 flex flex-col items-center space-y-4 animate-in zoom-in duration-500">
+                <div className="relative">
+                  <CheckCircle className="h-16 w-16 text-green-500 animate-in zoom-in duration-700" />
+                  <div className="absolute inset-0 h-16 w-16 bg-green-500 rounded-full animate-ping opacity-20"></div>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Conversion Complete!</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Redirecting to your converted images...
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+                  <ArrowRight className="h-4 w-4 animate-pulse" />
+                  <span className="text-sm">Going to results</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-        {timeRemaining > 0 && (
-          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-6 text-center">
-            <p className="text-amber-800 dark:text-amber-200">
-              Files will be automatically removed in {timeRemaining} minute{timeRemaining !== 1 ? "s" : ""}
-            </p>
-          </div>
-        )}
+          {showStats && <UsageStats stats={usageStats} onClose={() => setShowStats(false)} />}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 space-y-6">
-            <Tabs defaultValue="upload" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="upload">Upload Images</TabsTrigger>
-                <TabsTrigger value="converted" disabled={convertedImages.length === 0}>
-                  Converted ({convertedImages.length})
-                </TabsTrigger>
-              </TabsList>
+          {/* Enhanced Timer Alert */}
+          {timeRemaining > 0 && (
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 text-center shadow-lg">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse"></div>
+                <p className="text-amber-800 dark:text-amber-200 font-medium">
+                  Files will be automatically removed in {timeRemaining} minute{timeRemaining !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+          )}
 
-              <TabsContent value="upload" className="space-y-6">
-                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900 rounded-md p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium text-blue-800 dark:text-blue-300">Your privacy is protected</h3>
-                      <p className="text-sm text-blue-700 dark:text-blue-400">
-                        Files are processed entirely in your browser and are never uploaded to any server. They will be
-                        automatically removed after 30 minutes of inactivity.
-                      </p>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3 space-y-6">
+              {/* Enhanced Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-1">
+                  <TabsTrigger 
+                    value="upload" 
+                    className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+                  >
+                    Upload Images
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="converted" 
+                    disabled={convertedImages.length === 0}
+                    className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span>Converted</span>
+                      {convertedImages.length > 0 && (
+                        <span className="bg-white text-gray-800 text-xs px-2 py-1 rounded-full font-medium">
+                          {convertedImages.length}
+                        </span>
+                      )}
+                      {conversionComplete && (
+                        <CheckCircle className="h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="upload" className="space-y-6">
+                  {/* Enhanced Privacy Notice */}
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border border-blue-200 dark:border-blue-900 rounded-xl p-6 mb-6 shadow-lg">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg">
+                        <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-blue-800 dark:text-blue-300 text-lg">Your privacy is protected</h3>
+                        <p className="text-blue-700 dark:text-blue-400 mt-1">
+                          Files are processed entirely in your browser and are never uploaded to any server. They will be
+                          automatically removed after 30 minutes of inactivity.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-4 mb-4">
-                  <FileUploader
-                    onFilesAdded={handleFilesAdded}
-                    maxSize={25 * 1024 * 1024} // 25MB
-                    maxFiles={50}
-                  />
-
-                  {cameraAvailable && (
-                    <Button
-                      variant="outline"
-                      className="w-full md:w-auto flex-shrink-0"
-                      onClick={() => setShowCameraCapture(true)}
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Use Camera
-                    </Button>
-                  )}
-                </div>
-
-                {isConverting && (
-                  <BatchProgress
-                    totalFiles={conversionProgress.totalFiles}
-                    completedFiles={conversionProgress.completedFiles}
-                    currentFile={conversionProgress.currentFile}
-                    errors={conversionProgress.errors}
-                  />
-                )}
-
-                {files.length > 0 && (
-                  <>
-                    <div className="flex flex-wrap justify-between items-center gap-2">
-                      <h2 className="text-xl font-semibold">
-                        Preview ({files.length} file{files.length > 1 ? "s" : ""})
-                      </h2>
-                      <div className="flex flex-wrap gap-2">
-                        {files.length > 1 && (
-                          <Button variant="outline" size="sm" onClick={() => setShowBatchRename(true)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Batch Rename
-                          </Button>
-                        )}
-                        <Button variant="outline" size="sm" onClick={handleClearAll}>
-                          Clear All
-                        </Button>
-                      </div>
+                  {/* Enhanced Upload Section */}
+                  <div className="flex flex-wrap gap-4 mb-6">
+                    <div className="flex-1 min-w-0">
+                      <FileUploader
+                        onFilesAdded={handleFilesAdded}
+                        maxSize={25 * 1024 * 1024} // 25MB
+                        maxFiles={50}
+                      />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {files.map((file, index) => (
-                        <div key={`${file.name}-${index}`} className="relative group">
-                          <ImagePreview
-                            file={file}
-                            onRemove={() => handleRemoveFile(index)}
-                            onRename={(newName) => handleRenameFile(index, newName)}
-                          />
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleEditImage(file)}
+                    {cameraAvailable && (
+                      <Button
+                        variant="outline"
+                        className="w-full md:w-auto flex-shrink-0 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900 dark:hover:to-pink-900"
+                        onClick={() => setShowCameraCapture(true)}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Use Camera
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Enhanced Conversion Progress */}
+                  {isConverting && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Converting Images</h3>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {conversionProgress.completedFiles} of {conversionProgress.totalFiles}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-300 ease-out"
+                            style={{ 
+                              width: `${(conversionProgress.completedFiles / conversionProgress.totalFiles) * 100}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      {conversionProgress.currentFile && (
+                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span>Processing: {conversionProgress.currentFile}</span>
+                        </div>
+                      )}
+                      <BatchProgress
+                        totalFiles={conversionProgress.totalFiles}
+                        completedFiles={conversionProgress.completedFiles}
+                        currentFile={conversionProgress.currentFile}
+                        errors={conversionProgress.errors}
+                      />
+                    </div>
+                  )}
+
+                  {files.length > 0 && (
+                    <>
+                      {/* Enhanced File List Header */}
+                      <div className="flex flex-wrap justify-between items-center gap-4">
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                            Your Images
+                          </h2>
+                          <p className="text-gray-600 dark:text-gray-400">
+                            {files.length} file{files.length > 1 ? "s" : ""} ready for conversion
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {files.length > 1 && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setShowBatchRename(true)}
+                              className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950 border-amber-200 dark:border-amber-800"
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Batch Rename
+                            </Button>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleClearAll}
+                            className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950 dark:to-pink-950 border-red-200 dark:border-red-800"
                           >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            Clear All
                           </Button>
-                          {fileEdits[file.name] && (
-                            <div className="absolute top-2 right-12 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                              Edited
+                        </div>
+                      </div>
+
+                      {/* Enhanced Image Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {files.map((file, index) => (
+                          <div 
+                            key={`${file.name}-${index}`} 
+                            className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 overflow-hidden"
+                          >
+                            <ImagePreview
+                              file={file}
+                              onRemove={() => handleRemoveFile(index)}
+                              onRename={(newName) => handleRenameFile(index, newName)}
+                            />
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+                              onClick={() => handleEditImage(file)}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                            {fileEdits[file.name] && (
+                              <div className="absolute top-3 right-14 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-lg">
+                                ✓ Edited
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Enhanced Conversion Options */}
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Conversion Settings</h3>
+                        <ConversionOptions
+                          formats={formats}
+                          setFormats={setFormats}
+                          quality={quality}
+                          setQuality={setQuality}
+                          autoDownload={autoDownload}
+                          setAutoDownload={setAutoDownload}
+                          preserveExif={preserveExif}
+                          setPreserveExif={setPreserveExif}
+                        />
+                      </div>
+
+                      {/* Enhanced Convert Button */}
+                      <div className="flex justify-center">
+                        <Button
+                          onClick={handleConvert}
+                          disabled={isConverting || files.length === 0}
+                          className="w-full md:w-auto px-8 py-4 text-lg font-semibold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 hover:from-blue-700 hover:via-purple-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:bg-gray-400"
+                        >
+                          {isConverting ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Converting...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <Wand className="h-5 w-5" />
+                              <span>Convert to {formats.map((f) => f.toUpperCase()).join(", ")}</span>
                             </div>
                           )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <ConversionOptions
-                      formats={formats}
-                      setFormats={setFormats}
-                      quality={quality}
-                      setQuality={setQuality}
-                      autoDownload={autoDownload}
-                      setAutoDownload={setAutoDownload}
-                      preserveExif={preserveExif}
-                      setPreserveExif={setPreserveExif}
-                    />
-
-                    <div className="flex justify-center">
-                      <Button
-                        onClick={handleConvert}
-                        disabled={isConverting || files.length === 0}
-                        className="w-full md:w-auto"
-                      >
-                        <Wand className="h-4 w-4 mr-2" />
-                        {isConverting ? "Converting..." : `Convert to ${formats.map((f) => f.toUpperCase()).join(", ")}`}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="converted" className="space-y-6">
-                {convertedImages.length > 0 && (
-                  <>
-                    <div className="flex justify-between items-center flex-wrap gap-2">
-                      <h2 className="text-xl font-semibold">Converted Images ({convertedImages.length})</h2>
-                      <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleDownloadZip} disabled={isZipping}>
-                          <Download className="h-4 w-4 mr-2" />
-                          {isZipping ? "Creating ZIP..." : "Download as ZIP"}
-                        </Button>
-                        <Button variant="outline" onClick={handleDownloadAll}>
-                          Download All
                         </Button>
                       </div>
-                    </div>
+                    </>
+                  )}
+                </TabsContent>
 
-                    {/* Group by format if multiple formats */}
-                    {formats.length > 1 ? (
-                      <Tabs defaultValue={formats[0]} className="w-full">
-                        <TabsList className="mb-4">
-                          {formats.map((format) => (
-                            <TabsTrigger key={format} value={format}>
-                              {format.toUpperCase()}
+                <TabsContent value="converted" className="space-y-6">
+                  {convertedImages.length > 0 && (
+                    <>
+                      {/* Enhanced Results Header */}
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                              <h2 className="text-2xl font-bold text-green-800 dark:text-green-300">
+                                Conversion Complete!
+                              </h2>
+                              <p className="text-green-700 dark:text-green-400">
+                                {convertedImages.length} image{convertedImages.length > 1 ? "s" : ""} successfully converted
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <Button 
+                              variant="outline" 
+                              onClick={handleDownloadZip} 
+                              disabled={isZipping}
+                              className="bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              {isZipping ? "Creating ZIP..." : "Download ZIP"}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={handleDownloadAll}
+                              className="bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+                            >
+                              Download All
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Enhanced Results Grid */}
+                      {formats.length > 1 ? (
+                        <Tabs defaultValue={formats[0]} className="w-full">
+                          <TabsList className="mb-6 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-1">
+                            {formats.map((format) => (
+                              <TabsTrigger 
+                                key={format} 
+                                value={format}
+                                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+                              >
+                                {format.toUpperCase()}
+                              </TabsTrigger>
+                            ))}
+                            <TabsTrigger 
+                              value="all"
+                              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white"
+                            >
+                              All Formats
                             </TabsTrigger>
-                          ))}
-                          <TabsTrigger value="all">All</TabsTrigger>
-                        </TabsList>
+                          </TabsList>
 
-                        {formats.map((format) => (
-                          <TabsContent key={format} value={format} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {convertedImages
-                                .filter((img) => img.format === format)
-                                .map(({ url, file }, index) => (
-                                  <div
-                                    key={`${file.name}-${index}`}
-                                    className="border rounded-lg overflow-hidden dark:border-gray-700"
-                                  >
+                          {formats.map((format) => (
+                            <TabsContent key={format} value={format} className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {convertedImages
+                                  .filter((img) => img.format === format)
+                                  .map(({ url, file }, index) => (
+                                    <div
+                                      key={`${file.name}-${index}`}
+                                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                    >
+                                      <div className="relative">
+                                        <img
+                                          src={url || "/placeholder.svg"}
+                                          alt={file.name}
+                                          className="w-full h-48 object-contain bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+                                        />
+                                        <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                          {format.toUpperCase()}
+                                        </div>
+                                      </div>
+                                      <div className="p-4 space-y-3">
+                                        <div>
+                                          <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
+                                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {(file.size / 1024).toFixed(1)} KB
+                                          </p>
+                                        </div>
+                                        <Button 
+                                          size="sm" 
+                                          onClick={() => handleDownload(url, file.name)}
+                                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                                        >
+                                          <Download className="h-4 w-4 mr-2" />
+                                          Download
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </TabsContent>
+                          ))}
+
+                          <TabsContent value="all" className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {convertedImages.map(({ url, file, format }, index) => (
+                                <div
+                                  key={`${file.name}-${index}`}
+                                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                >
+                                  <div className="relative">
                                     <img
                                       src={url || "/placeholder.svg"}
                                       alt={file.name}
-                                      className="w-full h-48 object-contain bg-gray-100 dark:bg-gray-800"
+                                      className="w-full h-48 object-contain bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
                                     />
-                                    <div className="p-3 flex justify-between items-center dark:bg-gray-900">
-                                      <div className="truncate mr-2">
-                                        <p className="font-medium truncate">{file.name}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                                          {(file.size / 1024).toFixed(1)} KB
-                                        </p>
-                                      </div>
-                                      <Button size="sm" onClick={() => handleDownload(url, file.name)}>
-                                        Download
-                                      </Button>
+                                    <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                      {format.toUpperCase()}
                                     </div>
                                   </div>
-                                ))}
+                                  <div className="p-4 space-y-3">
+                                    <div>
+                                      <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
+                                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        {(file.size / 1024).toFixed(1)} KB
+                                      </p>
+                                    </div>
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => handleDownload(url, file.name)}
+                                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                                    >
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Download
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </TabsContent>
-                        ))}
-
-                        <TabsContent value="all" className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {convertedImages.map(({ url, file, format }, index) => (
-                              <div
-                                key={`${file.name}-${index}`}
-                                className="border rounded-lg overflow-hidden dark:border-gray-700"
-                              >
-                                <div className="relative">
-                                  <img
-                                    src={url || "/placeholder.svg"}
-                                    alt={file.name}
-                                    className="w-full h-48 object-contain bg-gray-100 dark:bg-gray-800"
-                                  />
-                                  <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                    {format.toUpperCase()}
-                                  </div>
+                        </Tabs>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {convertedImages.map(({ url, file }, index) => (
+                            <div
+                              key={`${file.name}-${index}`}
+                              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                            >
+                              <img
+                                src={url || "/placeholder.svg"}
+                                alt={file.name}
+                                className="w-full h-48 object-contain bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+                              />
+                              <div className="p-4 space-y-3">
+                                <div>
+                                  <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {(file.size / 1024).toFixed(1)} KB
+                                  </p>
                                 </div>
-                                <div className="p-3 flex justify-between items-center dark:bg-gray-900">
-                                  <div className="truncate mr-2">
-                                    <p className="font-medium truncate">{file.name}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                      {(file.size / 1024).toFixed(1)} KB
-                                    </p>
-                                  </div>
-                                  <Button size="sm" onClick={() => handleDownload(url, file.name)}>
-                                    Download
-                                  </Button>
-                                </div>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleDownload(url, file.name)}
+                                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </Button>
                               </div>
-                            ))}
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {convertedImages.map(({ url, file }, index) => (
-                          <div
-                            key={`${file.name}-${index}`}
-                            className="border rounded-lg overflow-hidden dark:border-gray-700"
-                          >
-                            <img
-                              src={url || "/placeholder.svg"}
-                              alt={file.name}
-                              className="w-full h-48 object-contain bg-gray-100 dark:bg-gray-800"
-                            />
-                            <div className="p-3 flex justify-between items-center dark:bg-gray-900">
-                              <div className="truncate mr-2">
-                                <p className="font-medium truncate">{file.name}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {(file.size / 1024).toFixed(1)} KB
-                                </p>
-                              </div>
-                              <Button size="sm" onClick={() => handleDownload(url, file.name)}>
-                                Download
-                              </Button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
 
-          {/* Sidebar - ensure it's properly isolated */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6 lg:sticky lg:top-8">
-              <DonationButton />
-              <AdPlaceholder />
+            {/* Enhanced Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="space-y-6 lg:sticky lg:top-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                  <DonationButton />
+                </div>
+                <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-xl overflow-hidden shadow-lg">
+                  <AdPlaceholder />
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Modals and dialogs */}
+          {showFeedback && <FeedbackForm onClose={() => setShowFeedback(false)} />}
+          {showBatchRename && (
+            <BatchRenameDialog
+              files={files}
+              isOpen={showBatchRename}
+              onClose={() => setShowBatchRename(false)}
+              onRename={handleBatchRename}
+            />
+          )}
+          {editingFile && (
+            <ImageEditor
+              file={editingFile.file}
+              previewUrl={editingFile.previewUrl}
+              isOpen={!!editingFile}
+              onClose={() => {
+                URL.revokeObjectURL(editingFile.previewUrl)
+                setEditingFile(null)
+              }}
+              onSave={handleSaveEdit}
+            />
+          )}
+          {showCameraCapture && (
+            <CameraCapture
+              isOpen={showCameraCapture}
+              onClose={() => setShowCameraCapture(false)}
+              onCapture={handleCameraCapture}
+            />
+          )}
+
+          <Toaster />
         </div>
-
-        {/* Modals and dialogs */}
-        {showFeedback && <FeedbackForm onClose={() => setShowFeedback(false)} />}
-        {showBatchRename && (
-          <BatchRenameDialog
-            files={files}
-            isOpen={showBatchRename}
-            onClose={() => setShowBatchRename(false)}
-            onRename={handleBatchRename}
-          />
-        )}
-        {editingFile && (
-          <ImageEditor
-            file={editingFile.file}
-            previewUrl={editingFile.previewUrl}
-            isOpen={!!editingFile}
-            onClose={() => {
-              URL.revokeObjectURL(editingFile.previewUrl)
-              setEditingFile(null)
-            }}
-            onSave={handleSaveEdit}
-          />
-        )}
-        {showCameraCapture && (
-          <CameraCapture
-            isOpen={showCameraCapture}
-            onClose={() => setShowCameraCapture(false)}
-            onCapture={handleCameraCapture}
-          />
-        )}
-
-        <Toaster />
       </div>
     </>
   )
