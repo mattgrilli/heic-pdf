@@ -27,8 +27,8 @@ export async function POST(request: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${request.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${request.headers.get("origin")}`,
+      success_url: `${request.headers.get("origin") || "https://ic.mattgrilli.com"}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: request.headers.get("origin") || "https://ic.mattgrilli.com",
     })
 
     return NextResponse.json({ url: session.url })

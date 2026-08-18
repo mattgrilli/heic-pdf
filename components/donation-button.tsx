@@ -36,15 +36,15 @@ export function DonationButton() {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-white dark:bg-gray-900 shadow-sm">
-      <h3 className="font-medium text-gray-900 dark:text-white mb-1.5">Support this tool</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Free and open for everyone. If it saved you some time, consider buying me a coffee.
-      </p>
-      <Button className="w-full" variant="outline" onClick={handleDonation} disabled={isLoading}>
-        <Coffee className="h-4 w-4 mr-2" />
-        {isLoading ? "Processing..." : "Buy me a coffee"}
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-gray-500 dark:text-gray-400"
+      onClick={handleDonation}
+      disabled={isLoading}
+    >
+      <Coffee className="h-4 w-4 mr-2" />
+      {isLoading ? "Processing..." : "Buy me a coffee"}
+    </Button>
   )
 }

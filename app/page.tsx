@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
+import { DonationButton } from "@/components/donation-button"
 import { FeedbackForm } from "@/components/feedback-form"
 import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, CheckCircle, Copy, Image as ImageIcon } from "lucide-react"
 import JSZip from "jszip"
@@ -1163,6 +1164,13 @@ export default function ImageConverter() {
               </Tabs>
             </div>
 
+            {/* Footer */}
+            <footer className="mt-16 pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col items-center gap-1 text-center">
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Free, private, and open for everyone — your images never leave your device.
+              </p>
+              <DonationButton />
+            </footer>
           </div>
 
           {/* Modals and dialogs */}
