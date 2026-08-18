@@ -1,7 +1,6 @@
 import type React from "react"
 import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { Inter } from "next/font/google"
 
@@ -15,15 +14,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* Google AdSense script */}
-        <Script
-          id="adsense-init"
-          strategy="afterInteractive"
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2890525515305277"
-          crossOrigin="anonymous"
-        />
-        
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <main>{children}</main>
         </ThemeProvider>

@@ -9,10 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
-import { AdPlaceholder } from "@/components/ad-placeholder"
-import { DonationButton } from "@/components/donation-button"
 import { FeedbackForm } from "@/components/feedback-form"
-import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, CheckCircle, Image as ImageIcon } from "lucide-react"
+import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, CheckCircle, Copy, Image as ImageIcon } from "lucide-react"
 import JSZip from "jszip"
 import { UsageStats } from "@/components/usage-stats"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -600,6 +598,47 @@ export default function ImageConverter() {
     document.body.removeChild(a)
   }, [])
 
+  // Copy a converted image to the clipboard. Browsers only accept PNG on
+  // the clipboard, so re-encode when needed — paste targets take PNG fine.
+  const handleCopyImage = useCallback(
+    async (url: string) => {
+      try {
+        if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
+          throw new Error("Clipboard images are not supported in this browser")
+        }
+        const blob = await (await fetch(url)).blob()
+        let pngBlob = blob
+        if (blob.type !== "image/png") {
+          const img = await loadImage(blob)
+          try {
+            const canvas = document.createElement("canvas")
+            const ctx = canvas.getContext("2d")
+            if (!ctx) throw new Error("Could not get canvas context")
+            canvas.width = img.width
+            canvas.height = img.height
+            ctx.drawImage(img, 0, 0)
+            pngBlob = await encodeCanvas(canvas, "image/png")
+          } finally {
+            URL.revokeObjectURL(img.src)
+          }
+        }
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })])
+        toast({
+          title: "Image copied",
+          description: "Paste it into an email, chat, or document.",
+        })
+      } catch (error) {
+        console.error("Error copying image:", error)
+        toast({
+          title: "Couldn't copy image",
+          description: error instanceof Error ? error.message : "Try downloading instead.",
+          variant: "destructive",
+        })
+      }
+    },
+    [toast],
+  )
+
   const handleDownloadAll = useCallback(() => {
     convertedImages.forEach(({ url, file }) => {
       handleDownload(url, file.name)
@@ -746,9 +785,9 @@ export default function ImageConverter() {
 
           {showStats && <UsageStats stats={usageStats} onClose={() => setShowStats(false)} />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3 space-y-6">
-              {/* Enhanced Tabs */}
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-6">
+              {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {convertedImages.length > 0 && (
                   <TabsList className="grid w-full grid-cols-2 mb-8">
@@ -1015,14 +1054,20 @@ export default function ImageConverter() {
                                             {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                           </p>
                                         </div>
-                                        <Button 
-                                          size="sm" 
-                                          onClick={() => handleDownload(url, file.name)}
-                                          className="w-full"
-                                        >
-                                          <Download className="h-4 w-4 mr-2" />
-                                          Download
-                                        </Button>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => handleDownload(url, file.name)}
+                                            className="flex-1"
+                                          >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Download
+                                          </Button>
+                                          <Button size="sm" variant="outline" onClick={() => handleCopyImage(url)} title="Copy image to clipboard">
+                                            <Copy className="h-4 w-4" />
+                                            <span className="sr-only">Copy image</span>
+                                          </Button>
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
@@ -1054,14 +1099,20 @@ export default function ImageConverter() {
                                         {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                       </p>
                                     </div>
-                                    <Button 
-                                      size="sm" 
-                                      onClick={() => handleDownload(url, file.name)}
-                                      className="w-full"
-                                    >
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Download
-                                    </Button>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleDownload(url, file.name)}
+                                        className="flex-1"
+                                      >
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Download
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={() => handleCopyImage(url)} title="Copy image to clipboard">
+                                        <Copy className="h-4 w-4" />
+                                        <span className="sr-only">Copy image</span>
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -1087,14 +1138,20 @@ export default function ImageConverter() {
                                     {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                   </p>
                                 </div>
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleDownload(url, file.name)}
-                                  className="w-full"
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleDownload(url, file.name)}
+                                    className="flex-1"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => handleCopyImage(url)} title="Copy image to clipboard">
+                                    <Copy className="h-4 w-4" />
+                                    <span className="sr-only">Copy image</span>
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1106,13 +1163,6 @@ export default function ImageConverter() {
               </Tabs>
             </div>
 
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="space-y-4 lg:sticky lg:top-20">
-                <DonationButton />
-                <AdPlaceholder />
-              </div>
-            </div>
           </div>
 
           {/* Modals and dialogs */}
