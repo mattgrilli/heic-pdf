@@ -35,11 +35,12 @@ export default function RootLayout({
 
 import type { Metadata } from "next"
 
-const title = "Image Converter — Convert & Compress Images in Your Browser"
+const title = "Convert & Compress Images in Your Browser | Image Converter"
 const description =
-  "Free online image converter and compressor. Convert HEIC, JPEG, PNG, and WebP entirely in your browser — resize, hit a target file size, and download. No uploads, no accounts."
+  "Convert and compress HEIC, JPEG, PNG, and WebP entirely in your browser. Resize, hit a target file size, download — no uploads, no accounts."
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ic.mattgrilli.com"),
   title,
   description,
   openGraph: {
