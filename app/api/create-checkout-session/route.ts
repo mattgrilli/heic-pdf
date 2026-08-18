@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
-})
-
 export async function POST(request: Request) {
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) {
+    return NextResponse.json({ error: "Donations are not configured" }, { status: 500 })
+  }
+
   try {
+    const stripe = new Stripe(secretKey)
     const { amount, productName } = await request.json()
 
     // Create a Checkout Session
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       cancel_url: `${request.headers.get("origin")}`,
     })
 
-    return NextResponse.json({ id: session.id })
+    return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error("Error creating checkout session:", error)
     return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 })

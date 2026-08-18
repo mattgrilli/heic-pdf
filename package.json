@@ -1,7 +1,8 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "image-converter",
+  "version": "1.0.0",
   "private": true,
+  "description": "Convert and compress HEIC, JPEG, PNG, and WebP images entirely in the browser — no uploads, no accounts.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -37,7 +38,6 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
-    "@stripe/stripe-js": "latest",
     "@vercel/analytics": "^1.6.1",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",

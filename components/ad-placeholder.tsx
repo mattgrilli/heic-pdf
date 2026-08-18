@@ -1,27 +1,16 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export function AdPlaceholder() {
-  const adContainerRef = useRef<HTMLDivElement>(null)
+  const insRef = useRef<HTMLModElement>(null)
+  const [adFilled, setAdFilled] = useState(false)
 
   useEffect(() => {
     // Only run this in the browser
     if (typeof window === "undefined") return
 
-    // Check if Google AdSense is already loaded
-    if (!window.adsbygoogle) {
-      // Create AdSense script
-      const script = document.createElement("script")
-      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
-      script.async = true
-      script.crossOrigin = "anonymous"
-      // Replace with your own AdSense publisher ID
-      script.dataset.adClient = "ca-pub-XXXXXXXXXXXXXXXX"
-      document.head.appendChild(script)
-    }
-
-    // Initialize ads when the script is loaded
+    // Request an ad once the AdSense script (loaded in the page) is ready
     const initializeAds = () => {
       try {
         if (window.adsbygoogle) {
@@ -32,44 +21,60 @@ export function AdPlaceholder() {
       }
     }
 
-    // Check if AdSense is loaded
+    let pollScript: ReturnType<typeof setInterval> | undefined
     if (window.adsbygoogle) {
       initializeAds()
     } else {
-      // Wait for AdSense to load
-      const interval = setInterval(() => {
+      pollScript = setInterval(() => {
         if (window.adsbygoogle) {
-          clearInterval(interval)
+          clearInterval(pollScript)
           initializeAds()
         }
       }, 200)
+    }
 
-      // Clean up interval
-      return () => clearInterval(interval)
+    // Only reveal the card once an ad has actually been filled — an empty
+    // ad box (ad blockers, dev, no inventory) looks broken otherwise
+    const pollStatus = setInterval(() => {
+      if (insRef.current?.getAttribute("data-ad-status") === "filled") {
+        setAdFilled(true)
+        clearInterval(pollStatus)
+      }
+    }, 500)
+    const stopPolling = setTimeout(() => {
+      clearInterval(pollStatus)
+      if (pollScript) clearInterval(pollScript)
+    }, 10000)
+
+    return () => {
+      if (pollScript) clearInterval(pollScript)
+      clearInterval(pollStatus)
+      clearTimeout(stopPolling)
     }
   }, [])
 
   return (
-    <div className="border rounded-lg overflow-hidden dark:border-gray-700 relative">
-      <div className="bg-gray-100 dark:bg-gray-800 p-2 text-xs text-gray-500 dark:text-gray-400">Advertisement</div>
-      <div ref={adContainerRef} className="h-[250px] bg-gray-50 dark:bg-gray-900 relative">
-        {/* Google AdSense Ad Unit */}
-        <ins
-          className="adsbygoogle block w-full h-full"
-          style={{ display: "block", width: "100%", height: "250px" }}
-          data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // Replace with your AdSense publisher ID
-          data-ad-slot="XXXXXXXXXX" // Replace with your ad slot ID
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        ></ins>
-
-        {/* Minimal fallback - only show when ads fail to load */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-          <div className="w-16 h-16 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded flex items-center justify-center">
-            <span className="text-xs text-gray-400 dark:text-gray-600">Ad</span>
-          </div>
-        </div>
+    <div
+      className={
+        adFilled
+          ? "border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm"
+          : "max-h-0 overflow-hidden opacity-0"
+      }
+      aria-hidden={!adFilled}
+    >
+      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        Advertisement
       </div>
+      {/* Google AdSense Ad Unit */}
+      <ins
+        ref={insRef}
+        className="adsbygoogle block w-full"
+        style={{ display: "block", width: "100%", height: "250px" }}
+        data-ad-client="ca-pub-2890525515305277"
+        data-ad-slot="XXXXXXXXXX" // Replace with your ad slot ID
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      ></ins>
     </div>
   )
 }

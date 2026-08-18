@@ -7,8 +7,27 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type OutputFormat = "jpeg" | "png" | "webp"
+
+const RESIZE_PRESETS = [
+  { value: "original", label: "Original size" },
+  { value: "3840", label: "4K (3840 px)" },
+  { value: "2560", label: "2K (2560 px)" },
+  { value: "1920", label: "Full HD (1920 px)" },
+  { value: "1280", label: "HD (1280 px)" },
+  { value: "800", label: "Small (800 px)" },
+]
+
+const TARGET_SIZE_PRESETS = [
+  { value: "none", label: "No limit" },
+  { value: "2048", label: "2 MB" },
+  { value: "1024", label: "1 MB" },
+  { value: "500", label: "500 KB" },
+  { value: "200", label: "200 KB" },
+  { value: "100", label: "100 KB" },
+]
 
 interface ConversionOptionsProps {
   formats: OutputFormat[]
@@ -19,6 +38,10 @@ interface ConversionOptionsProps {
   setAutoDownload: (autoDownload: boolean) => void
   preserveExif: boolean
   setPreserveExif: (preserveExif: boolean) => void
+  maxDimension: number | null
+  setMaxDimension: (maxDimension: number | null) => void
+  targetSizeKB: number | null
+  setTargetSizeKB: (targetSizeKB: number | null) => void
 }
 
 export function ConversionOptions({
@@ -30,6 +53,10 @@ export function ConversionOptions({
   setAutoDownload,
   preserveExif,
   setPreserveExif,
+  maxDimension,
+  setMaxDimension,
+  targetSizeKB,
+  setTargetSizeKB,
 }: ConversionOptionsProps) {
   const [activeTab, setActiveTab] = useState<"basic" | "advanced">("basic")
 
@@ -108,6 +135,52 @@ export function ConversionOptions({
                   <span>Lower quality, smaller file</span>
                   <span>Higher quality, larger file</span>
                 </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Resize Images</Label>
+              <Select
+                value={maxDimension ? String(maxDimension) : "original"}
+                onValueChange={(value) => setMaxDimension(value === "original" ? null : Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Original size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESIZE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Limits the longest side of each image. Shrinking dimensions is the biggest file-size saver.
+              </p>
+            </div>
+
+            {(formats.includes("jpeg") || formats.includes("webp")) && (
+              <div className="space-y-2">
+                <Label>Max File Size</Label>
+                <Select
+                  value={targetSizeKB ? String(targetSizeKB) : "none"}
+                  onValueChange={(value) => setTargetSizeKB(value === "none" ? null : Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No limit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TARGET_SIZE_PRESETS.map((preset) => (
+                      <SelectItem key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Automatically lowers quality (and dimensions if needed) until each JPEG/WebP fits under this size.
+                </p>
               </div>
             )}
 

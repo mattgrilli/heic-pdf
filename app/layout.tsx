@@ -3,6 +3,9 @@ import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
+import { Inter } from "next/font/google"
+
+const inter = Inter({ subsets: ["latin"] })
 
 export default function RootLayout({
   children,
@@ -10,12 +13,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        <title>HEIC Converter</title>
-        <meta name="description" content="Convert HEIC images to JPEG or PNG format" />
-      </head>
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
         {/* Google AdSense script */}
         <Script
           id="adsense-init"
@@ -34,6 +33,33 @@ export default function RootLayout({
   )
 }
 
-export const metadata = {
-  generator: 'v0.dev'
+import type { Metadata } from "next"
+
+const title = "Image Converter — Convert & Compress Images in Your Browser"
+const description =
+  "Free online image converter and compressor. Convert HEIC, JPEG, PNG, and WebP entirely in your browser — resize, hit a target file size, and download. No uploads, no accounts."
+
+export const metadata: Metadata = {
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    siteName: "Image Converter",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Image Converter — convert and compress images entirely in your browser",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/og.png"],
+  },
 }

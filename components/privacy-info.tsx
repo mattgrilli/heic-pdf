@@ -19,14 +19,14 @@ export function PrivacyInfo() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
+        <Button variant="ghost" size="icon" title="About this tool">
           <Info className="h-4 w-4" />
-          <span>About</span>
+          <span className="sr-only">About</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>About HEIC Converter</DialogTitle>
+          <DialogTitle>About Image Converter</DialogTitle>
           <DialogDescription>Information about how this tool works and handles your data</DialogDescription>
         </DialogHeader>
 
@@ -62,10 +62,10 @@ export function PrivacyInfo() {
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-medium">Automatic Cleanup</h3>
+                <h3 className="font-medium">You're in Control</h3>
                 <p className="text-sm text-muted-foreground">
-                  For your security, all files are automatically removed from memory after 30 minutes of inactivity, or
-                  when you close the browser tab.
+                  Your files stay available as long as you keep the tab open. Use "Clear All" to remove them at any
+                  time, or simply close the tab — nothing is stored anywhere else.
                 </p>
               </div>
             </div>
@@ -73,9 +73,10 @@ export function PrivacyInfo() {
             <div className="flex items-start gap-3">
               <Lock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-medium">Session Isolation</h3>
+                <h3 className="font-medium">No Accounts, No Tracking of Files</h3>
                 <p className="text-sm text-muted-foreground">
-                  Each user gets a unique session. Your files are not accessible to other users of this tool.
+                  There is nothing to sign up for and no server-side storage. Your files are never accessible to anyone
+                  but you.
                 </p>
               </div>
             </div>
@@ -103,8 +104,8 @@ export function PrivacyInfo() {
                 <span className="font-medium">Download:</span> Save the converted images to your device
               </li>
               <li>
-                <span className="font-medium">Cleanup:</span> Files are removed from memory after 30 minutes or when you
-                close the tab
+                <span className="font-medium">Cleanup:</span> Files stay in memory only — clear them with "Clear All"
+                or by closing the tab
               </li>
             </ol>
 

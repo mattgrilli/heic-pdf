@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Share2, Twitter, Facebook, Linkedin, Link, Mail } from "lucide-react"
@@ -7,9 +8,18 @@ import { useToast } from "@/hooks/use-toast"
 
 export function SocialShare() {
   const { toast } = useToast()
-  const shareUrl = typeof window !== "undefined" ? window.location.origin : ""
-  const shareTitle = "Free HEIC to JPEG/PNG Converter - No Upload Required!"
-  const shareText = "Convert HEIC images to JPEG or PNG format right in your browser. No file upload needed!"
+  const shareTitle = "Free Image Converter & Compressor - No Upload Required!"
+  const shareText = "Convert and compress HEIC, JPEG, PNG, and WebP images right in your browser. No file upload needed!"
+
+  const shareUrl = () => window.location.origin
+
+  // Decide which share UI to show only after mount — the server can't know
+  // whether the browser supports navigator.share, and branching during SSR
+  // causes a hydration mismatch
+  const [hasNativeShare, setHasNativeShare] = useState(false)
+  useEffect(() => {
+    setHasNativeShare(!!navigator.share)
+  }, [])
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -17,7 +27,7 @@ export function SocialShare() {
         await navigator.share({
           title: shareTitle,
           text: shareText,
-          url: shareUrl,
+          url: shareUrl(),
         })
       } catch (error) {
         console.error("Error sharing:", error)
@@ -26,36 +36,33 @@ export function SocialShare() {
   }
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareUrl)
+    navigator.clipboard.writeText(shareUrl())
     toast({
       title: "Link copied",
       description: "The link has been copied to your clipboard.",
     })
   }
 
-  // Check if native sharing is available (mainly mobile devices)
-  const hasNativeShare = typeof navigator !== "undefined" && !!navigator.share
-
   return (
     <div>
       {hasNativeShare ? (
-        <Button variant="outline" size="sm" onClick={handleShare}>
-          <Share2 className="h-4 w-4 mr-2" />
-          Share
+        <Button variant="ghost" size="icon" onClick={handleShare} title="Share">
+          <Share2 className="h-4 w-4" />
+          <span className="sr-only">Share</span>
         </Button>
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
+            <Button variant="ghost" size="icon" title="Share">
+              <Share2 className="h-4 w-4" />
+              <span className="sr-only">Share</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onClick={() =>
                 window.open(
-                  `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+                  `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl())}`,
                   "_blank",
                 )
               }
@@ -65,7 +72,7 @@ export function SocialShare() {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
-                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank")
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl())}`, "_blank")
               }
             >
               <Facebook className="h-4 w-4 mr-2" />
@@ -74,7 +81,7 @@ export function SocialShare() {
             <DropdownMenuItem
               onClick={() =>
                 window.open(
-                  `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+                  `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl())}`,
                   "_blank",
                 )
               }
@@ -85,7 +92,7 @@ export function SocialShare() {
             <DropdownMenuItem
               onClick={() =>
                 window.open(
-                  `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`,
+                  `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl())}`,
                   "_blank",
                 )
               }
