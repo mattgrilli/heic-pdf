@@ -18,7 +18,7 @@ export function DonationButton() {
         },
         body: JSON.stringify({
           amount: 500, // $5.00 in cents
-          productName: "Support Image Converter",
+          productName: "Support Chameleon",
         }),
       })
 

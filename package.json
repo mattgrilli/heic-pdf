@@ -1,5 +1,5 @@
 {
-  "name": "image-converter",
+  "name": "chameleon",
   "version": "1.0.0",
   "private": true,
   "description": "Convert and compress HEIC, JPEG, PNG, and WebP images entirely in the browser — no uploads, no accounts.",

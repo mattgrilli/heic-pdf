@@ -30,7 +30,7 @@ export default function ThankYouPage() {
         </CardHeader>
         <CardContent className="text-center">
           <p>
-            We appreciate your generosity. Your contribution will help us continue to improve the HEIC Converter and
+            We appreciate your generosity. Your contribution will help us continue to improve Chameleon and
             develop more useful tools.
           </p>
         </CardContent>

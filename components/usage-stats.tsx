@@ -39,7 +39,7 @@ export function UsageStats({ stats, onClose }: UsageStatsProps) {
           <X className="h-4 w-4" />
         </Button>
         <CardTitle>Your Usage Statistics</CardTitle>
-        <CardDescription>Summary of your Image Converter usage</CardDescription>
+        <CardDescription>Summary of your Chameleon usage</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

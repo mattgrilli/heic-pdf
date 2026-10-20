@@ -45,7 +45,7 @@ export function FeedbackForm({ onClose }: FeedbackFormProps) {
           name,
           email,
           message: feedback,
-          subject: "New Feedback from HEIC Converter",
+          subject: "New Feedback from Chameleon",
         }),
       })
 

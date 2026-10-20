@@ -95,18 +95,18 @@ export function FileUploader({
         {...getRootProps()}
         className={`group border rounded-xl px-8 py-16 text-center cursor-pointer transition-all bg-white dark:bg-gray-900 shadow-sm ${
           isDragging || isDragActive
-            ? "border-gray-900 dark:border-white ring-2 ring-gray-900/10 dark:ring-white/10"
-            : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md"
+            ? "border-primary ring-4 ring-primary/15 bg-primary/5"
+            : "border-gray-200 dark:border-gray-800 hover:border-primary/40 hover:shadow-md"
         }`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center justify-center gap-3">
-          <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center transition-transform group-hover:-translate-y-0.5">
-            <Upload className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center transition-transform group-hover:-translate-y-0.5">
+            <Upload className="h-5 w-5 text-primary" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              Drop images here, or <span className="underline underline-offset-4 decoration-gray-300 dark:decoration-gray-600">browse</span>
+            <h3 className="font-display text-xl font-semibold text-gray-900 dark:text-white">
+              Drop your photos here, or <span className="text-primary underline underline-offset-4 decoration-primary/40">browse</span>
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               HEIC, JPG, PNG, GIF, WebP, BMP, and TIFF

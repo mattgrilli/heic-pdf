@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
 import { DonationButton } from "@/components/donation-button"
 import { FeedbackForm } from "@/components/feedback-form"
-import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, CheckCircle, Copy, Image as ImageIcon } from "lucide-react"
+import { Download, MessageSquare, BarChart, Shield, Camera, Edit, Wand, Pencil, Copy } from "lucide-react"
 import JSZip from "jszip"
 import { UsageStats } from "@/components/usage-stats"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -20,6 +20,8 @@ import { PrivacyInfo } from "@/components/privacy-info"
 import { BatchRenameDialog } from "@/components/batch-rename-dialog"
 import { ImageEditor, type ImageEditSettings } from "@/components/image-editor"
 import { CameraCapture } from "@/components/camera-capture"
+import { ChameleonLogo } from "@/components/chameleon-logo"
+import NextImage from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface ConversionProgress {
@@ -732,12 +734,10 @@ export default function ImageConverter() {
         {/* App header */}
         <header className="sticky top-0 z-40 border-b border-gray-200/70 dark:border-gray-800/70 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
           <div className="container mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center">
-                <ImageIcon className="h-4 w-4 text-white dark:text-gray-900" />
-              </div>
-              <span className="font-semibold tracking-tight text-gray-900 dark:text-white">Image Converter</span>
-            </div>
+            <a href="/" className="group flex items-center gap-2.5">
+              <ChameleonLogo className="h-8 w-8 transition-transform duration-300 group-hover:-rotate-6" />
+              <span className="font-display text-lg font-bold tracking-tight text-gray-900 dark:text-white">Chameleon</span>
+            </a>
             <div className="flex items-center gap-0.5 text-gray-500 dark:text-gray-400">
               <PrivacyInfo />
               <SocialShare />
@@ -756,16 +756,28 @@ export default function ImageConverter() {
 
         <div className="container mx-auto px-4 max-w-6xl pb-16">
           {/* Hero */}
-          <div className="text-center pt-14 pb-10">
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-gray-900 dark:text-white text-balance">
-              Convert &amp; compress images
+          <div className="text-center pt-10 lg:pt-14 pb-10">
+            <NextImage
+              src="/mascot.webp"
+              alt=""
+              width={640}
+              height={633}
+              priority
+              className="lg:hidden mx-auto mb-4 w-28 h-auto"
+            />
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/70 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-chameleon" />
+              HEIC · JPEG · PNG · WebP
+            </div>
+            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white text-balance">
+              Photos that <span className="text-chameleon">fit in anywhere</span>
             </h1>
-            <p className="text-lg text-gray-500 dark:text-gray-400 mt-3">
-              HEIC, JPEG, PNG, and WebP — fast, free, and entirely in your browser.
+            <p className="text-lg text-gray-500 dark:text-gray-400 mt-4 max-w-xl mx-auto text-balance">
+              Convert and shrink images to whatever the situation calls for — fast, free, and entirely in your browser.
             </p>
-            <div className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-400 dark:text-gray-500">
-              <Shield className="h-3.5 w-3.5" />
-              <span>Your files never leave your device</span>
+            <div className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+              <Shield className="h-3.5 w-3.5 text-primary" />
+              <span>Nothing gets uploaded — ever.</span>
             </div>
           </div>
 
@@ -773,11 +785,11 @@ export default function ImageConverter() {
           {showSuccessAnimation && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-300">
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-8 flex flex-col items-center space-y-4 shadow-xl animate-in zoom-in-95 duration-300">
-                <CheckCircle className="h-12 w-12 text-emerald-500" />
+                <NextImage src="/mascot.webp" alt="" width={640} height={633} className="w-32 h-auto animate-in zoom-in-50 spin-in-12 duration-500" />
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Conversion Complete</h3>
+                  <h3 className="font-display text-xl font-bold text-gray-900 dark:text-white">Transformation complete</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Taking you to your converted images…
+                    Fresh new skins, coming right up…
                   </p>
                 </div>
               </div>
@@ -808,7 +820,16 @@ export default function ImageConverter() {
 
                 <TabsContent value="upload" className="space-y-6">
                   {/* Upload Section */}
-                  <div className="space-y-3 mb-6">
+                  <div className="relative space-y-3 mb-6">
+                    {/* Mascot perched on the dropzone's top edge */}
+                    <NextImage
+                      src="/mascot.webp"
+                      alt=""
+                      width={640}
+                      height={633}
+                      priority
+                      className="hidden lg:block absolute -top-[126px] right-10 z-10 w-[150px] h-auto pointer-events-none select-none drop-shadow-sm"
+                    />
                     <FileUploader
                       onFilesAdded={handleFilesAdded}
                       maxSize={25 * 1024 * 1024} // 25MB
@@ -835,14 +856,14 @@ export default function ImageConverter() {
                     <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-800">
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Converting Images</h3>
+                          <h3 className="font-display text-lg font-bold text-gray-900 dark:text-white">Changing colors…</h3>
                           <span className="text-sm text-gray-500 dark:text-gray-400">
                             {conversionProgress.completedFiles} of {conversionProgress.totalFiles}
                           </span>
                         </div>
                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
                           <div
-                            className="h-full bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ease-out"
+                            className="h-full bg-chameleon rounded-full transition-all duration-300 ease-out"
                             style={{ 
                               width: `${(conversionProgress.completedFiles / conversionProgress.totalFiles) * 100}%` 
                             }}
@@ -851,7 +872,7 @@ export default function ImageConverter() {
                       </div>
                       {conversionProgress.currentFile && (
                         <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <div className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-pulse"></div>
+                          <div className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse"></div>
                           <span>Processing: {conversionProgress.currentFile}</span>
                         </div>
                       )}
@@ -869,11 +890,11 @@ export default function ImageConverter() {
                       {/* Enhanced File List Header */}
                       <div className="flex flex-wrap justify-between items-center gap-4">
                         <div>
-                          <h2 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
-                            Your Images
+                          <h2 className="font-display text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            Your images
                           </h2>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {files.length} file{files.length > 1 ? "s" : ""} ready for conversion
+                            {files.length} file{files.length > 1 ? "s" : ""} ready for a change
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -920,7 +941,7 @@ export default function ImageConverter() {
                               Edit
                             </Button>
                             {fileEdits[file.name] && (
-                              <div className="absolute top-3 right-14 bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-md font-medium">
+                              <div className="absolute top-3 right-14 bg-sun text-sun-foreground text-xs px-2.5 py-1 rounded-md font-medium">
                                 Edited
                               </div>
                             )}
@@ -976,15 +997,13 @@ export default function ImageConverter() {
                       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
                         <div className="flex items-center justify-between flex-wrap gap-4">
                           <div className="flex items-center space-x-4">
-                            <div className="bg-emerald-50 dark:bg-emerald-950/50 p-3 rounded-full">
-                              <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
+                            <NextImage src="/mascot.webp" alt="" width={640} height={633} className="w-16 h-auto shrink-0" />
                             <div>
-                              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                Conversion Complete
+                              <h2 className="font-display text-2xl font-bold text-gray-900 dark:text-white">
+                                All done!
                               </h2>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {convertedImages.length} image{convertedImages.length > 1 ? "s" : ""} successfully converted
+                                {convertedImages.length} image{convertedImages.length > 1 ? "s" : ""} changed {convertedImages.length > 1 ? "their" : "its"} colors
                                 {(() => {
                                   const saved = convertedImages.reduce(
                                     (sum, item) => sum + Math.max(0, item.originalSize - item.file.size),
@@ -993,7 +1012,7 @@ export default function ImageConverter() {
                                   return saved > 0 ? (
                                     <>
                                       {" · "}
-                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                      <span className="text-primary font-medium">
                                         {formatBytes(saved)} saved
                                       </span>
                                     </>
@@ -1052,7 +1071,7 @@ export default function ImageConverter() {
                                         <div>
                                           <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
                                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                                            {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
+                                            {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-primary font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                           </p>
                                         </div>
                                         <div className="flex gap-2">
@@ -1097,7 +1116,7 @@ export default function ImageConverter() {
                                     <div>
                                       <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
                                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
+                                        {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-primary font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                       </p>
                                     </div>
                                     <div className="flex gap-2">
@@ -1136,7 +1155,7 @@ export default function ImageConverter() {
                                 <div>
                                   <p className="font-semibold text-gray-900 dark:text-white truncate">{file.name}</p>
                                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-green-600 dark:text-green-400 font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
+                                    {formatBytes(originalSize)} → {formatBytes(file.size)}{file.size < originalSize && <span className="text-primary font-medium"> (−{Math.round((1 - file.size / originalSize) * 100)}%)</span>}{file.size > originalSize && <span className="text-amber-600 dark:text-amber-400 font-medium"> (+{Math.round((file.size / originalSize - 1) * 100)}%)</span>}
                                   </p>
                                 </div>
                                 <div className="flex gap-2">
@@ -1168,6 +1187,9 @@ export default function ImageConverter() {
             <footer className="mt-16 pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col items-center gap-1 text-center">
               <p className="text-sm text-gray-400 dark:text-gray-500">
                 Free, private, and open for everyone — your images never leave your device.
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Chameleon is a tiny side project by Matt Grilli.
               </p>
               <DonationButton />
             </footer>

@@ -10,7 +10,29 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+  			display: ['var(--font-display)', 'var(--font-sans)', 'ui-sans-serif', 'sans-serif']
+  		},
   		colors: {
+  			// Mossy, slightly warm neutrals so every gray-* in the app carries the brand tint
+  			gray: {
+  				'50': '#f7f8f3',
+  				'100': '#eff1e9',
+  				'200': '#e1e5d8',
+  				'300': '#c9cfbd',
+  				'400': '#9ba591',
+  				'500': '#737d69',
+  				'600': '#586150',
+  				'700': '#434b3d',
+  				'800': '#2a3128',
+  				'900': '#1a2019',
+  				'950': '#0d120e'
+  			},
+  			sun: {
+  				DEFAULT: 'hsl(var(--sun))',
+  				foreground: 'hsl(var(--sun-foreground))'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

@@ -8,8 +8,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export function SocialShare() {
   const { toast } = useToast()
-  const shareTitle = "Free Image Converter & Compressor - No Upload Required!"
-  const shareText = "Convert and compress HEIC, JPEG, PNG, and WebP images right in your browser. No file upload needed!"
+  const shareTitle = "Chameleon — free image converter & compressor, no upload required"
+  const shareText = "Turn HEIC into JPG, PNG, or WebP and shrink it, right in your browser. Nothing gets uploaded!"
 
   const shareUrl = () => window.location.origin
 

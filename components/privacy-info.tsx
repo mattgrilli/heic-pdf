@@ -26,7 +26,7 @@ export function PrivacyInfo() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>About Image Converter</DialogTitle>
+          <DialogTitle>About Chameleon</DialogTitle>
           <DialogDescription>Information about how this tool works and handles your data</DialogDescription>
         </DialogHeader>
 
